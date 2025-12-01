@@ -12,4 +12,8 @@ class CustomerRepository {
     fun save(customer: Customer) {
         db[customer.id] = customer
     }
+
+    fun findById(customerId: Long): Customer? {
+        return db[customerId]
+    }
 }

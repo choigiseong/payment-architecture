@@ -1,5 +1,6 @@
 package com.coco.payment
 
+import org.springframework.stereotype.Component
 import java.io.IOException
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
@@ -8,6 +9,7 @@ import java.nio.charset.StandardCharsets
 import java.util.*
 
 
+@Component
 class TossHandler {
 
 //    @Throws(IOException::class)
