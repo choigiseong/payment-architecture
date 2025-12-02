@@ -1,4 +1,4 @@
-package com.coco.payment
+package com.coco.payment.handler
 
 import com.coco.payment.view.TossPaymentView
 import org.springframework.cloud.openfeign.FeignClient
@@ -20,5 +20,5 @@ interface TossPaymentClient {
     @PostMapping("\${payment.toss.api.endpoint.billing-key-issue}")
     fun issueBillingKey(
         @RequestBody request: TossPaymentView.BillingKeyRequest
-    ): TossPaymentView.BillingKeyResponse
+    ): Result<TossPaymentView.BillingKeyResponse>
 }

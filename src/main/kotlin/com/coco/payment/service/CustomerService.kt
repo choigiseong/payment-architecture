@@ -14,13 +14,17 @@ class CustomerService(
         customerRepository.save(customer)
     }
 
+    fun findByCustomerKey(customerKey: String): Customer {
+        return customerRepository.findByCustomerKey(customerKey) ?: throw IllegalArgumentException("Customer not found")
+    }
+
     fun findCustomerById(customerId: Long): Customer {
         return customerRepository.findById(customerId) ?: throw IllegalArgumentException("Customer not found")
     }
 
-    fun addBillingKey(customerId: Long, paymentSystem: PaymentSystem, billingKey: String) {
+    fun addBillingKey(customerId: Long, paymentSystem: PaymentSystem, billingKey: String, cardNumber: String, cardCompany: String) {
         val customer = findCustomerById(customerId)
-        customer.addBillingKey(paymentSystem, billingKey)
+        customer.addBillingKey(paymentSystem, billingKey, cardNumber, cardCompany)
     }
 
 

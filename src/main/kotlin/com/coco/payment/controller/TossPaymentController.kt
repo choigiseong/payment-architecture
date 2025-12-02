@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestMethod
 
 @Controller
-class PaymentController(
+class TossPaymentController(
     private val customerService: CustomerService,
     @Value("\${payment.toss.api-key}")
     private val tossPayApiKey: String

@@ -16,4 +16,8 @@ class CustomerRepository {
     fun findById(customerId: Long): Customer? {
         return db[customerId]
     }
+
+    fun findByCustomerKey(customerKey: String): Customer? {
+        return db.values.find { it.getCustomerKey() == customerKey }
+    }
 }
