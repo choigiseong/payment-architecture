@@ -2,6 +2,7 @@ package com.coco.payment.controller
 
 import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.service.PaymentService
+import com.coco.payment.service.TossPaymentService
 import com.coco.payment.view.TossPaymentView
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.ResponseEntity
@@ -12,15 +13,19 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 class TossPaymentApiController(
     private val paymentService: PaymentService,
+    private val tossPaymentService: TossPaymentService
 ) {
     private val PAYMENT_SYSTEM = PaymentSystem.TOSS
 
     @RequestMapping(value = ["/issue-billing-key"])
     fun issueBillingKey(@RequestBody request: TossPaymentView.BillingKeyRequest): ResponseEntity<Void> {
-        paymentService.registerBillingKey(
-            PAYMENT_SYSTEM,
+        val billingKeyDto = tossPaymentService.issueBillingKey(
             request.customerKey,
             request.authKey
+        )
+        paymentService.registerBillingKey(
+            request.customerKey,
+            billingKeyDto
         )
         return ResponseEntity.ok().build()
     }

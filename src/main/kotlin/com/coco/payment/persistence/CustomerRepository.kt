@@ -8,6 +8,10 @@ class CustomerRepository {
 
     private val db = mutableMapOf<Long, Customer>()
 
+    init {
+        db[1] = Customer(1, "test", mutableListOf())
+    }
+
 
     fun save(customer: Customer) {
         db[customer.id] = customer
