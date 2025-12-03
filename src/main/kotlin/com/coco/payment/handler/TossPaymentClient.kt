@@ -17,8 +17,9 @@ interface TossPaymentClient {
 //        @RequestBody request: TossConfirmRequest
 //    ): TossConfirmResponse
 
+    // todo result
     @PostMapping("\${payment.toss.api.endpoint.billing-key-issue}")
     fun issueBillingKey(
         @RequestBody request: TossPaymentView.BillingKeyRequest
-    ): Result<TossPaymentView.BillingKeyResponse>
+    ): TossPaymentView.BillingKeyResponse
 }
