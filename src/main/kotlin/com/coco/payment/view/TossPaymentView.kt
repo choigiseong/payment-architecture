@@ -4,12 +4,12 @@ import java.time.Instant
 
 interface TossPaymentView {
 
-    data class BillingKeyRequest(
+    data class TossBillingKeyRequest(
         val customerKey: String,
         val authKey: String
     )
 
-    data class BillingKeyResponse(
+    data class TossBillingKeyResponse(
         val mId: String,
         val customerKey: String,
         val authenticatedAt: Instant,

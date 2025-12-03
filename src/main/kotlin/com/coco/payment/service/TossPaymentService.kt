@@ -16,12 +16,12 @@ class TossPaymentService(
         authKey: String
     ): BillingKeyDto {
         val response = tossPaymentClient.issueBillingKey(
-            TossPaymentView.BillingKeyRequest(
+            TossPaymentView.TossBillingKeyRequest(
                 customerKey,
                 authKey
             )
-        ).getOrThrow()
-        // todo 뭔가
+        )
+        // todo 뭔가 result로
 
         return BillingKeyDto(
             PaymentSystem.TOSS,
