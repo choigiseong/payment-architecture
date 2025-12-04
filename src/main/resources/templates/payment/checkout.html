@@ -53,24 +53,57 @@
     }
 
     // ------  SDK 초기화 ------
-    // TODO: clientKey는 개발자센터의 API 개별 연동 키 > 결제창 연동에 사용하려할 MID > 클라이언트 키로 바꾸세요.
-    // TODO: server.js 의 secretKey 또한 결제위젯 연동 키가 아닌 API 개별 연동 키의 시크릿 키로 변경해야 합니다.
-    // TODO: 구매자의 고유 아이디를 불러와서 customerKey로 설정하세요. 이메일・전화번호와 같이 유추가 가능한 값은 안전하지 않습니다.
-    // @docs https://docs.tosspayments.com/sdk/v2/js#토스페이먼츠-초기화
     const clientKey = "test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq";
-    const customerKey = "customer-1";
-    const tossPayments = TossPayments(clientKey);
-    // 회원 결제
-    // @docs https://docs.tosspayments.com/sdk/v2/js#tosspaymentspayment
-    const payment = tossPayments.payment({
-      customerKey,
+    let payment = null;
+    
+    // API를 통해 고객 키 가져오기
+    async function initializePayment() {
+        try {
+            const response = await fetch('/api/v1/customers/me');
+            if (!response.ok) {
+                throw new Error('고객 정보를 불러오는데 실패했습니다.');
+            }
+            const data = await response.json();
+            
+            // API 응답 구조에 따라 data.customerKey 또는 data.customerKey로 접근
+            const customerKey = data.customerKey || (data.data && data.data.customerKey);
+            
+            if (!customerKey) {
+                throw new Error('유효한 고객 키를 받지 못했습니다.');
+            }
+            
+            // Toss Payments SDK 초기화
+            const tossPayments = TossPayments(clientKey);
+            payment = tossPayments.payment({
+                customerKey: customerKey
+            });
+            
+            console.log('결제 시스템 초기화 완료');
+            return payment;
+        } catch (error) {
+            console.error('결제 초기화 중 오류 발생:', error);
+            alert('결제 시스템 초기화에 실패했습니다. 페이지를 새로고침 해주세요.');
+            throw error;
+        }
+    }
+    
+    // 페이지 로드 시 결제 초기화
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            await initializePayment();
+        } catch (error) {
+            console.error('초기화 실패:', error);
+        }
     });
-    // 비회원 결제
-    // const payment = tossPayments.payment({customerKey: TossPayments.ANONYMOUS});
 
     // ------ '결제하기' 버튼 누르면 결제창 띄우기 ------
     // @docs https://docs.tosspayments.com/sdk/v2/js#paymentrequestpayment
     async function requestPayment() {
+      if (!payment) {
+          alert('결제 시스템을 초기화하는 중입니다. 잠시 후 다시 시도해주세요.');
+          return;
+      }
+
       // 결제를 요청하기 전에 orderId, amount를 서버에 저장하세요.
       // 결제 과정에서 악의적으로 결제 금액이 바뀌는 것을 확인하는 용도입니다.
       switch (selectedPaymentMethod) {
