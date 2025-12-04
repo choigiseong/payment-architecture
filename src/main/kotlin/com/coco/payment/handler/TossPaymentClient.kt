@@ -1,6 +1,6 @@
 package com.coco.payment.handler
 
-import com.coco.payment.view.TossPaymentView
+import com.coco.payment.handler.dto.TossPaymentView
 import org.springframework.cloud.openfeign.FeignClient
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody

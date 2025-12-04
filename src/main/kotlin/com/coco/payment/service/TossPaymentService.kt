@@ -3,7 +3,7 @@ package com.coco.payment.service
 import com.coco.payment.handler.TossPaymentClient
 import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.service.dto.BillingKeyDto
-import com.coco.payment.view.TossPaymentView
+import com.coco.payment.handler.dto.TossPaymentView
 import org.springframework.stereotype.Service
 
 @Service

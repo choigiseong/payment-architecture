@@ -1,4 +1,4 @@
-package com.coco.payment.view
+package com.coco.payment.handler.dto
 
 import java.time.Instant
 
