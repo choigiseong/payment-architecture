@@ -31,4 +31,28 @@ class TossPaymentService(
         )
     }
 
+    fun confirmBilling(
+        customerKey: String,
+        billingKey: String,
+        amount: Long,
+        customerEmail: String,
+        customerName: String,
+        orderId: String,
+        orderName: String,
+    ): String {
+        val response = tossPaymentClient.confirmBilling(
+            billingKey,
+            TossPaymentView.TossConfirmBillingRequest(
+                customerKey,
+                amount,
+                customerEmail,
+                customerName,
+                orderId,
+                orderName
+            )
+        )
+
+        return response.orderId
+    }
+
 }

@@ -28,4 +28,20 @@ interface TossPaymentView {
         )
     }
 
+    data class TossConfirmBillingRequest(
+        val customerKey: String,
+        val amount: Long,
+        val customerEmail: String,
+        val customerName: String,
+        val orderId: String,
+        val orderName: String,
+    )
+
+    data class TossConfirmBillingResponse(
+        val mId: String,
+        val lastTransactionKey: String,
+        val paymentKey: String,
+        val orderId: String
+    )
+
 }
