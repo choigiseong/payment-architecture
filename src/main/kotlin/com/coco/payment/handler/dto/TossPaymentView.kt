@@ -38,10 +38,17 @@ interface TossPaymentView {
     )
 
     data class TossConfirmBillingResponse(
+        val paymentKey: String,
+        val type: String,
         val mId: String,
         val lastTransactionKey: String,
-        val paymentKey: String,
-        val orderId: String
+        val orderId: String,
+        val totalAmount: Long,
+        val balanceAmount: Long,
+        val status: String,
+        val requestedAt: Instant,
+        val approvedAt: Instant,
+        val taxFreeAmount: Long
     )
 
 }
