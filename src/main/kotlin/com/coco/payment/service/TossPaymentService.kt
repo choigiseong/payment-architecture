@@ -2,8 +2,8 @@ package com.coco.payment.service
 
 import com.coco.payment.handler.TossPaymentClient
 import com.coco.payment.persistence.enumerator.PaymentSystem
-import com.coco.payment.service.dto.BillingKeyDto
 import com.coco.payment.handler.dto.TossPaymentView
+import com.coco.payment.service.dto.BillingView
 import org.springframework.stereotype.Service
 
 @Service
@@ -14,7 +14,7 @@ class TossPaymentService(
     fun issueBillingKey(
         customerKey: String,
         authKey: String
-    ): BillingKeyDto {
+    ): BillingView.BillingKeyDto {
         val response = tossPaymentClient.issueBillingKey(
             TossPaymentView.TossBillingKeyRequest(
                 customerKey,
@@ -23,7 +23,7 @@ class TossPaymentService(
         )
         // todo 뭔가 result로
 
-        return BillingKeyDto(
+        return BillingView.BillingKeyDto(
             PaymentSystem.TOSS,
             response.billingKey,
             response.cardNumber,
@@ -40,19 +40,28 @@ class TossPaymentService(
         orderId: String,
         orderName: String,
     ): String {
-        val response = tossPaymentClient.confirmBilling(
-            billingKey,
-            TossPaymentView.TossConfirmBillingRequest(
-                customerKey,
-                amount,
-                customerEmail,
-                customerName,
-                orderId,
-                orderName
+        val responseResult = runCatching {
+            tossPaymentClient.confirmBilling(
+                billingKey,
+                TossPaymentView.TossConfirmBillingRequest(
+                    customerKey,
+                    amount,
+                    customerEmail,
+                    customerName,
+                    orderId,
+                    orderName
+                )
             )
-        )
+        }
 
-        return response.orderId
+        responseResult
+            .onSuccess {
+                return it.orderId
+            }
+            .onFailure {
+                throw it
+            }
+        return ""
     }
 
 }
