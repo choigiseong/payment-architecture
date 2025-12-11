@@ -14,12 +14,12 @@ class PaymentService(
 ) {
 
     fun registerBillingKey(
-        customerKey: String, billingKeyDto: BillingView.BillingKeyDto
+        customerKey: String, billingKeyResponse: BillingView.BillingKeyResponse
     ) {
         val customer = customerService.findByCustomerKey(customerKey)
         customerService.addBillingKey(
             customer.id,
-            billingKeyDto,
+            billingKeyResponse,
         )
     }
 
@@ -29,42 +29,33 @@ class PaymentService(
     }
 
     fun confirmBilling(
-        customerKey: String,
-        paymentSystem: PaymentSystem,
         confirmBillingDto: BillingView.ConfirmBillingDto
-    ) {
+    ): BillingView.ConfirmBillingResult {
         val billingKeyModel =
-            findBillingKey(customerKey, paymentSystem)
+            findBillingKey(confirmBillingDto.customerKey, confirmBillingDto.paymentSystem)
                 ?: throw IllegalArgumentException("Billing key not found")
 
-        when (paymentSystem) {
+        return when (confirmBillingDto.paymentSystem) {
             PaymentSystem.TOSS -> {
                 tossPaymentService.confirmBilling(
-                    customerKey,
                     billingKeyModel.billingKey,
-                    confirmBillingDto.amount,
-                    confirmBillingDto.customerEmail,
-                    confirmBillingDto.customerName,
-                    confirmBillingDto.orderId,
-                    confirmBillingDto.orderName
+                    confirmBillingDto
                 )
             }
-
             else -> {
                 throw IllegalArgumentException("Payment system not found")
             }
         }
-
-        //todo
-
     }
 
 
-//    @Transactional
-    fun successBilling() {
-
-        // todo 이건 연결, 수정
+    // 리스폰스가 request 처럼 사용되어야하는데.. 음...
+    //    @Transactional
+    fun successBilling(confirmBillingResult: BillingView.ConfirmBillingResult) {
+        // 이건 인터페이스로, 다른 pg사도 할 수 있게 하고.
         tossPaymentEventService.createTossPaymentEvent()
+
+        // 이건 공통 정보 넣고.
         ledgerService.createLedger()
     }
 

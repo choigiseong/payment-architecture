@@ -1,10 +1,12 @@
 package com.coco.payment.service.dto
 
 import com.coco.payment.persistence.enumerator.PaymentSystem
+import java.time.Instant
 
 interface BillingView {
 
-    data class BillingKeyDto(
+    // todo 음 구조가..
+    data class BillingKeyResponse(
         val paymentSystem: PaymentSystem,
         val billingKey: String,
         val cardNumber: String,
@@ -12,12 +14,23 @@ interface BillingView {
     )
 
     data class ConfirmBillingDto(
+        val customerKey: String,
         val paymentSystem: PaymentSystem,
-        val billingKey: String,
         val amount: Long,
         val customerEmail: String,
         val customerName: String,
         val orderId: String,
         val orderName: String
     )
+
+    data class ConfirmBillingResult(
+        val orderId: String,
+        val paymentKey: String,
+        val paymentSystem: PaymentSystem,
+        val status: String,
+        val requestedAt: Instant,
+        val approvedAt: Instant,
+        val taxFreeAmount: Long
+    )
+
 }

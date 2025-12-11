@@ -2,7 +2,7 @@ package com.coco.payment.service
 
 import com.coco.payment.persistence.CustomerRepository
 import com.coco.payment.persistence.model.Customer
-import com.coco.payment.service.dto.BillingKeyDto
+import com.coco.payment.service.dto.BillingView
 import org.springframework.stereotype.Service
 
 @Service
@@ -22,13 +22,13 @@ class CustomerService(
         return customerRepository.findById(customerId) ?: throw IllegalArgumentException("Customer not found")
     }
 
-    fun addBillingKey(customerId: Long, billingKeyDto: BillingKeyDto) {
+    fun addBillingKey(customerId: Long, billingKeyResponse: BillingView.BillingKeyResponse) {
         val customer = findCustomerById(customerId)
         customer.addBillingKey(
-            billingKeyDto.paymentSystem,
-            billingKeyDto.billingKey,
-            billingKeyDto.cardNumber,
-            billingKeyDto.cardCompany
+            billingKeyResponse.paymentSystem,
+            billingKeyResponse.billingKey,
+            billingKeyResponse.cardNumber,
+            billingKeyResponse.cardCompany
         )
     }
 

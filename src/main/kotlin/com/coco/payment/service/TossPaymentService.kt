@@ -11,19 +11,21 @@ class TossPaymentService(
     private val tossPaymentClient: TossPaymentClient
 ) {
 
+    // todo 성공, 실패, 알 수 없음.
+
     fun issueBillingKey(
         customerKey: String,
         authKey: String
-    ): BillingView.BillingKeyDto {
+    ): BillingView.BillingKeyResponse {
         val response = tossPaymentClient.issueBillingKey(
             TossPaymentView.TossBillingKeyRequest(
                 customerKey,
                 authKey
             )
         )
-        // todo 뭔가 result로
+        // todo result로
 
-        return BillingView.BillingKeyDto(
+        return BillingView.BillingKeyResponse(
             PaymentSystem.TOSS,
             response.billingKey,
             response.cardNumber,
@@ -32,36 +34,40 @@ class TossPaymentService(
     }
 
     fun confirmBilling(
-        customerKey: String,
         billingKey: String,
-        amount: Long,
-        customerEmail: String,
-        customerName: String,
-        orderId: String,
-        orderName: String,
-    ): String {
+        confirmBillingDto: BillingView.ConfirmBillingDto
+    ): BillingView.ConfirmBillingResult {
         val responseResult = runCatching {
             tossPaymentClient.confirmBilling(
                 billingKey,
                 TossPaymentView.TossConfirmBillingRequest(
-                    customerKey,
-                    amount,
-                    customerEmail,
-                    customerName,
-                    orderId,
-                    orderName
+                    confirmBillingDto.customerKey,
+                    confirmBillingDto.amount,
+                    confirmBillingDto.customerEmail,
+                    confirmBillingDto.customerName,
+                    confirmBillingDto.orderId,
+                    confirmBillingDto.orderName
                 )
             )
         }
 
+        // 통일된 dto로 반환
         responseResult
             .onSuccess {
-                return it.orderId
+                return BillingView.ConfirmBillingResult(
+                    it.orderId,
+                    it.paymentKey,
+                    PaymentSystem.TOSS,
+                    it.status,
+                    it.requestedAt,
+                    it.approvedAt,
+                    it.taxFreeAmount
+                )
             }
             .onFailure {
                 throw it
             }
-        return ""
+        throw IllegalArgumentException("TossPaymentService.confirmBilling")
     }
 
 }
