@@ -43,11 +43,11 @@ class PaymentService(
 
     fun successBilling(
         customerKey: String,
-        providerResponse: BillingView.ConfirmResult
+        confirmResult: BillingView.ConfirmResult
     ) {
         val customer = customerService.findByCustomerKey(customerKey)
-        val strategy = strategyManager.resolve(providerResponse.paymentSystem)
-        strategy.onSuccess(customer.id!!, providerResponse)
+        val strategy = strategyManager.resolve(confirmResult.paymentSystem)
+        strategy.onSuccess(customer.id!!, confirmResult)
     }
 
 }

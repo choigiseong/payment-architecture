@@ -7,6 +7,7 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 
+//todo 컬럼 생각
 @Entity
 @Table(name = "ledger")
 class Ledger(
@@ -14,11 +15,11 @@ class Ledger(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null,
     @Column(nullable = false)
-    var customerSeq: String = "",
+    var customerSeq: Long,
     @Column(nullable = false)
-    var beforeBalance: Long = 0,
+    var beforeBalance: Long,
     @Column(nullable = false)
-    var balance: Long = 0,
+    var balance: Long,
     @Column(nullable = false)
-    var amount: Long = 0
+    var amount: Long
 )

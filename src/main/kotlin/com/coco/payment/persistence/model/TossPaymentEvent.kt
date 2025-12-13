@@ -8,6 +8,7 @@ import jakarta.persistence.Id
 import jakarta.persistence.Table
 import java.time.Instant
 
+//todo 컬럼 생각
 @Entity
 @Table(name = "toss_payment_event")
 class TossPaymentEvent(
@@ -15,7 +16,9 @@ class TossPaymentEvent(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null,
     @Column(nullable = false)
-    var customerSeq: String = "",
+    var customerSeq: Long,
+    @Column(nullable = false)
+    val ledgerSeq: Long,
     @Column(nullable = false)
     var paymentKey: String = "",
     @Column(nullable = false)

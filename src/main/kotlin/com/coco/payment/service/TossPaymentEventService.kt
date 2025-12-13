@@ -1,8 +1,8 @@
 package com.coco.payment.service
 
-import com.coco.payment.handler.dto.TossPaymentView
+import com.coco.payment.persistence.model.TossPaymentEvent
 import com.coco.payment.persistence.repository.TossPaymentEventRepository
-import com.coco.payment.service.dto.ConfirmBillingResult
+import com.coco.payment.service.dto.BillingView
 import org.springframework.stereotype.Service
 
 @Service
@@ -11,8 +11,17 @@ class TossPaymentEventService(
 ) {
     fun createTossPaymentEvent(
         customerSeq: Long,
-        confirmBillingResult: ConfirmBillingResult.TossConfirmBillingBillingResult
-    ) {
-
+        ledgerSeq: Long,
+        confirmBillingResult: BillingView.ConfirmResult.TossConfirmResult
+    ): TossPaymentEvent {
+        return tossPaymentEventRepository.save(
+            TossPaymentEvent(
+                null,
+                customerSeq,
+                ledgerSeq,
+                confirmBillingResult.paymentKey,
+                confirmBillingResult.type,
+            )
+        )
     }
 }

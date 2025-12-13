@@ -26,12 +26,19 @@ class TossPaymentStrategy(
     @Transactional
     override fun onSuccess(
         customerId: Long,
-        providerResponse: BillingView.ConfirmResult
+        confirmResult: BillingView.ConfirmResult
     ) {
-        if (providerResponse !is BillingView.ConfirmResult.TossConfirmResult) {
+        if (confirmResult !is BillingView.ConfirmResult.TossConfirmResult) {
             throw IllegalArgumentException("Provider response is not TossPaymentConfirmResponse")
         }
-        tossPaymentEventService.createTossPaymentEvent(customerId, providerResponse)
-        ledgerService.createLedger()
+        val ledger = ledgerService.createLedger(
+            customerId,
+        )
+        tossPaymentEventService.createTossPaymentEvent(
+            customerId,
+            ledger.id!!,
+            confirmResult
+        )
+
     }
 }
