@@ -8,6 +8,12 @@ interface TossBillingView {
     ) {
     }
 
+    data class BillingKeyResponse(
+        val billingKey: String,
+        val cardNumber: String,
+        val cardCompany: String
+    )
+
     data class ConfirmBillingRequest(
         val customerKey: String,
         val customerEmail: String,

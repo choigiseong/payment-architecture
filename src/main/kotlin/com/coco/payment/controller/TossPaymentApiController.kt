@@ -21,7 +21,7 @@ class TossPaymentApiController(
     private val paymentSystem = PaymentSystem.TOSS
 
     @RequestMapping(value = ["/issue-billing-key"])
-    fun issueBillingKey(@RequestBody request: TossBillingView.BillingKeyRequest): ResponseEntity<String> {
+    fun issueBillingKey(@RequestBody request: TossBillingView.BillingKeyRequest): ResponseEntity<TossBillingView.BillingKeyResponse> {
         val billingKeyResult = tossPaymentService.issueBillingKey(
             request.customerKey,
             request.authKey
@@ -30,7 +30,13 @@ class TossPaymentApiController(
             request.customerKey,
             billingKeyResult
         )
-        return ResponseEntity.ok("billingKeyDto") // todo 변경
+
+        val response = TossBillingView.BillingKeyResponse(
+            billingKeyResult.billingKey,
+            billingKeyResult.cardNumber,
+            billingKeyResult.cardCompany,
+        )
+        return ResponseEntity.ok(response)
     }
 
     @RequestMapping(value = ["/confirm-billing"])
