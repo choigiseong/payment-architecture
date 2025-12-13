@@ -12,7 +12,7 @@ interface BillingView {
         val cardCompany: String
     )
 
-    data class ConfirmBillingDto(
+    data class ConfirmBillingCommand(
         val customerKey: String,
         val paymentSystem: PaymentSystem,
         val amount: Long,

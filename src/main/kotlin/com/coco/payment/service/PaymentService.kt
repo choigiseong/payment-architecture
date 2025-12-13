@@ -4,6 +4,7 @@ import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.persistence.model.CustomerPaymentBillingKey
 import com.coco.payment.service.dto.BillingView
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 @Service
 class PaymentService(
@@ -29,19 +30,20 @@ class PaymentService(
     }
 
     fun confirmBilling(
-        confirmBillingDto: BillingView.ConfirmBillingDto
+        confirmBillingCommand: BillingView.ConfirmBillingCommand
     ): BillingView.ConfirmBillingResult {
         val billingKeyModel =
-            findBillingKey(confirmBillingDto.customerKey, confirmBillingDto.paymentSystem)
+            findBillingKey(confirmBillingCommand.customerKey, confirmBillingCommand.paymentSystem)
                 ?: throw IllegalArgumentException("Billing key not found")
 
-        return when (confirmBillingDto.paymentSystem) {
+        return when (confirmBillingCommand.paymentSystem) {
             PaymentSystem.TOSS -> {
                 tossPaymentService.confirmBilling(
                     billingKeyModel.billingKey,
-                    confirmBillingDto
+                    confirmBillingCommand
                 )
             }
+
             else -> {
                 throw IllegalArgumentException("Payment system not found")
             }
@@ -50,7 +52,7 @@ class PaymentService(
 
 
     // 리스폰스가 request 처럼 사용되어야하는데.. 음...
-    //    @Transactional
+    @Transactional
     fun successBilling(confirmBillingResult: BillingView.ConfirmBillingResult) {
         // 이건 인터페이스로, 다른 pg사도 할 수 있게 하고.
         tossPaymentEventService.createTossPaymentEvent()

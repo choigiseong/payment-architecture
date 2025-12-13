@@ -42,7 +42,7 @@ class TossPaymentApiController(
     @RequestMapping(value = ["/confirm-billing"])
     fun confirmBilling(@RequestBody request: TossBillingView.ConfirmBillingRequest): ResponseEntity<TossBillingView.ConfirmBillingResponse> {
         val confirmBillingResponse = paymentService.confirmBilling(
-            BillingView.ConfirmBillingDto(
+            BillingView.ConfirmBillingCommand(
                 request.customerKey,
                 paymentSystem,
                 request.amount,

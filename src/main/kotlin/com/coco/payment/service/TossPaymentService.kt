@@ -35,18 +35,18 @@ class TossPaymentService(
 
     fun confirmBilling(
         billingKey: String,
-        confirmBillingDto: BillingView.ConfirmBillingDto
+        confirmBillingCommand: BillingView.ConfirmBillingCommand
     ): BillingView.ConfirmBillingResult {
         val responseResult = runCatching {
             tossPaymentClient.confirmBilling(
                 billingKey,
                 TossPaymentView.TossConfirmBillingRequest(
-                    confirmBillingDto.customerKey,
-                    confirmBillingDto.amount,
-                    confirmBillingDto.customerEmail,
-                    confirmBillingDto.customerName,
-                    confirmBillingDto.orderId,
-                    confirmBillingDto.orderName
+                    confirmBillingCommand.customerKey,
+                    confirmBillingCommand.amount,
+                    confirmBillingCommand.customerEmail,
+                    confirmBillingCommand.customerName,
+                    confirmBillingCommand.orderId,
+                    confirmBillingCommand.orderName
                 )
             )
         }

@@ -4,6 +4,12 @@
 ## dto 패키지 실험 단계
 - 각 레이어별 dto, 각 레이어로 들어가거나 나올 때에 사용, 그 외의 다른 레이어에 침범 X
 
+## DTO
+- 서비스 DTO
+  - command와 result
+- 컨트롤러 DTO
+  - request와 response
+
 todo 
 1. 빌링 등록, 결제
    2. 빌링 히스토리, 장부? 등록
