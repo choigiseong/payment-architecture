@@ -3,15 +3,17 @@ package com.coco.payment.service
 import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.persistence.model.CustomerPaymentBillingKey
 import com.coco.payment.service.dto.BillingView
+import com.coco.payment.handler.dto.ConfirmBillingResponse
+import com.coco.payment.service.strategy.PaymentStrategyManager
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 
 @Service
 class PaymentService(
     private val customerService: CustomerService,
     private val tossPaymentService: TossPaymentService,
     private val ledgerService: LedgerService,
-    private val tossPaymentEventService: TossPaymentEventService
+    private val tossPaymentEventService: TossPaymentEventService,
+    private val strategyManager: PaymentStrategyManager
 ) {
 
     fun registerBillingKey(
@@ -31,34 +33,25 @@ class PaymentService(
 
     fun confirmBilling(
         confirmBillingCommand: BillingView.ConfirmBillingCommand
-    ): BillingView.ConfirmBillingResult {
+    ): ConfirmBillingResponse {
         val billingKeyModel =
             findBillingKey(confirmBillingCommand.customerKey, confirmBillingCommand.paymentSystem)
                 ?: throw IllegalArgumentException("Billing key not found")
 
-        return when (confirmBillingCommand.paymentSystem) {
-            PaymentSystem.TOSS -> {
-                tossPaymentService.confirmBilling(
-                    billingKeyModel.billingKey,
-                    confirmBillingCommand
-                )
-            }
-
-            else -> {
-                throw IllegalArgumentException("Payment system not found")
-            }
-        }
+        val strategy = strategyManager.resolve(confirmBillingCommand.paymentSystem)
+        return strategy.confirmBilling(
+            billingKeyModel.billingKey, confirmBillingCommand
+        )
     }
 
 
-    // 리스폰스가 request 처럼 사용되어야하는데.. 음...
-    @Transactional
-    fun successBilling(confirmBillingResult: BillingView.ConfirmBillingResult) {
-        // 이건 인터페이스로, 다른 pg사도 할 수 있게 하고.
-        tossPaymentEventService.createTossPaymentEvent()
-
-        // 이건 공통 정보 넣고.
-        ledgerService.createLedger()
+    fun successBilling(
+        customerKey: String,
+        providerResponse: ConfirmBillingResponse
+    ) {
+        val customer = customerService.findByCustomerKey(customerKey)
+        val strategy = strategyManager.resolve(providerResponse.paymentSystem)
+        strategy.onSuccess(customer.id!!, providerResponse)
     }
 
 }

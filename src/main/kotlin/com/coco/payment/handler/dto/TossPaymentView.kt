@@ -1,5 +1,6 @@
 package com.coco.payment.handler.dto
 
+import com.coco.payment.persistence.enumerator.PaymentSystem
 import java.time.Instant
 
 interface TossPaymentView {
@@ -37,7 +38,8 @@ interface TossPaymentView {
         val orderName: String,
     )
 
-    data class TossConfirmBillingResponse(
+    data class TossConfirmBillingBillingResponse(
+        override val paymentSystem: PaymentSystem = PaymentSystem.TOSS,
         val paymentKey: String,
         val type: String,
         val mId: String,
@@ -49,6 +51,6 @@ interface TossPaymentView {
         val requestedAt: Instant,
         val approvedAt: Instant,
         val taxFreeAmount: Long
-    )
+    ) : ConfirmBillingResponse
 
 }

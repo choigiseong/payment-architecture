@@ -36,7 +36,7 @@ class TossPaymentService(
     fun confirmBilling(
         billingKey: String,
         confirmBillingCommand: BillingView.ConfirmBillingCommand
-    ): BillingView.ConfirmBillingResult {
+    ): TossPaymentView.TossConfirmBillingBillingResponse {
         val responseResult = runCatching {
             tossPaymentClient.confirmBilling(
                 billingKey,
@@ -54,15 +54,7 @@ class TossPaymentService(
         // 통일된 dto로 반환
         responseResult
             .onSuccess {
-                return BillingView.ConfirmBillingResult(
-                    it.orderId,
-                    it.paymentKey,
-                    PaymentSystem.TOSS,
-                    it.status,
-                    it.requestedAt,
-                    it.approvedAt,
-                    it.taxFreeAmount
-                )
+                return it
             }
             .onFailure {
                 throw it

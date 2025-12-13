@@ -23,5 +23,5 @@ interface TossPaymentClient {
     fun confirmBilling(
         @PathVariable billingKey: String,
         @RequestBody request: TossPaymentView.TossConfirmBillingRequest
-    ): TossPaymentView.TossConfirmBillingResponse
+    ): TossPaymentView.TossConfirmBillingBillingResponse
 }

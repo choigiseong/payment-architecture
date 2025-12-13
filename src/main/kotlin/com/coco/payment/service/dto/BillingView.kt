@@ -22,14 +22,4 @@ interface BillingView {
         val orderName: String
     )
 
-    data class ConfirmBillingResult(
-        val orderId: String,
-        val paymentKey: String,
-        val paymentSystem: PaymentSystem,
-        val status: String,
-        val requestedAt: Instant,
-        val approvedAt: Instant,
-        val taxFreeAmount: Long
-    )
-
 }
