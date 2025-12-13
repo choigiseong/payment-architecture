@@ -22,13 +22,13 @@ class TossPaymentApiController(
 
     @RequestMapping(value = ["/issue-billing-key"])
     fun issueBillingKey(@RequestBody request: TossBillingView.BillingKeyRequest): ResponseEntity<String> {
-        val billingKeyDto = tossPaymentService.issueBillingKey(
+        val billingKeyResult = tossPaymentService.issueBillingKey(
             request.customerKey,
             request.authKey
         )
         paymentService.registerBillingKey(
             request.customerKey,
-            billingKeyDto
+            billingKeyResult
         )
         return ResponseEntity.ok("billingKeyDto") // todo 변경
     }

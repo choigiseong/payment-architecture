@@ -1,9 +1,10 @@
-package com.coco.payment.service
+﻿package com.coco.payment.service
 
 import com.coco.payment.persistence.CustomerRepository
 import com.coco.payment.persistence.model.Customer
 import com.coco.payment.service.dto.BillingView
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 @Service
 class CustomerService(
@@ -15,22 +16,25 @@ class CustomerService(
     }
 
     fun findByCustomerKey(customerKey: String): Customer {
-        return customerRepository.findByCustomerKey(customerKey) ?: throw IllegalArgumentException("Customer not found")
+        val id = customerKey.removePrefix("customer-").toLongOrNull()
+            ?: throw IllegalArgumentException("Invalid customer key")
+        return customerRepository.findById(id).orElseThrow { IllegalArgumentException("Customer not found") }
     }
 
     fun findCustomerById(customerId: Long): Customer {
-        return customerRepository.findById(customerId) ?: throw IllegalArgumentException("Customer not found")
+        return customerRepository.findById(customerId).orElseThrow { IllegalArgumentException("Customer not found") }
     }
 
-    fun addBillingKey(customerId: Long, billingKeyResponse: BillingView.BillingKeyResponse) {
+    @Transactional
+    fun addBillingKey(customerId: Long, billingKeyResult: BillingView.BillingKeyResult) {
         val customer = findCustomerById(customerId)
         customer.addBillingKey(
-            billingKeyResponse.paymentSystem,
-            billingKeyResponse.billingKey,
-            billingKeyResponse.cardNumber,
-            billingKeyResponse.cardCompany
+            billingKeyResult.paymentSystem,
+            billingKeyResult.billingKey,
+            billingKeyResult.cardNumber,
+            billingKeyResult.cardCompany
         )
+        // Ensure persistence when outside of dirty tracking or for clarity
+        customerRepository.save(customer)
     }
-
-
 }

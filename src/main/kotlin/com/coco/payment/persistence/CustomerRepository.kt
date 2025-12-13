@@ -1,27 +1,8 @@
-package com.coco.payment.persistence
+﻿package com.coco.payment.persistence
 
 import com.coco.payment.persistence.model.Customer
-import org.springframework.stereotype.Component
+import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.stereotype.Repository
 
-@Component
-class CustomerRepository {
-
-    private val db = mutableMapOf<Long, Customer>()
-
-    init {
-        db[1] = Customer(1, "test", mutableListOf())
-    }
-
-
-    fun save(customer: Customer) {
-        db[customer.id] = customer
-    }
-
-    fun findById(customerId: Long): Customer? {
-        return db[customerId]
-    }
-
-    fun findByCustomerKey(customerKey: String): Customer? {
-        return db.values.find { it.getCustomerKey() == customerKey }
-    }
-}
+@Repository
+interface CustomerRepository : JpaRepository<Customer, Long>

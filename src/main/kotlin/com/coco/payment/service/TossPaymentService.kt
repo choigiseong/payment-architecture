@@ -16,7 +16,7 @@ class TossPaymentService(
     fun issueBillingKey(
         customerKey: String,
         authKey: String
-    ): BillingView.BillingKeyResponse {
+    ): BillingView.BillingKeyResult {
         val response = tossPaymentClient.issueBillingKey(
             TossPaymentView.TossBillingKeyRequest(
                 customerKey,
@@ -25,7 +25,7 @@ class TossPaymentService(
         )
         // todo result로
 
-        return BillingView.BillingKeyResponse(
+        return BillingView.BillingKeyResult(
             PaymentSystem.TOSS,
             response.billingKey,
             response.cardNumber,

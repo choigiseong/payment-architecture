@@ -14,12 +14,12 @@ class PaymentService(
 ) {
 
     fun registerBillingKey(
-        customerKey: String, billingKeyResponse: BillingView.BillingKeyResponse
+        customerKey: String, billingKeyResult: BillingView.BillingKeyResult
     ) {
         val customer = customerService.findByCustomerKey(customerKey)
         customerService.addBillingKey(
             customer.id,
-            billingKeyResponse,
+            billingKeyResult,
         )
     }
 

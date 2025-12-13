@@ -5,8 +5,7 @@ import java.time.Instant
 
 interface BillingView {
 
-    // todo 음 구조가..
-    data class BillingKeyResponse(
+    data class BillingKeyResult(
         val paymentSystem: PaymentSystem,
         val billingKey: String,
         val cardNumber: String,
