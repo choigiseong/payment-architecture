@@ -1,6 +1,6 @@
 ﻿package com.coco.payment.service
 
-import com.coco.payment.persistence.CustomerRepository
+import com.coco.payment.persistence.repository.CustomerRepository
 import com.coco.payment.persistence.model.Customer
 import com.coco.payment.service.dto.BillingView
 import org.springframework.stereotype.Service

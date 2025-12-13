@@ -1,6 +1,6 @@
 package com.coco.payment.config
 
-import com.coco.payment.persistence.CustomerRepository
+import com.coco.payment.persistence.repository.CustomerRepository
 import com.coco.payment.persistence.model.Customer
 import org.springframework.boot.CommandLineRunner
 import org.springframework.context.annotation.Bean

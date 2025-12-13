@@ -1,4 +1,4 @@
-﻿package com.coco.payment.persistence
+package com.coco.payment.persistence.repository
 
 import com.coco.payment.persistence.model.Customer
 import org.springframework.data.jpa.repository.JpaRepository
