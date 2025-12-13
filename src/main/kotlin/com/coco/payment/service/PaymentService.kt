@@ -18,7 +18,7 @@ class PaymentService(
     ) {
         val customer = customerService.findByCustomerKey(customerKey)
         customerService.addBillingKey(
-            customer.id,
+            customer.id!!,
             billingKeyResult,
         )
     }
