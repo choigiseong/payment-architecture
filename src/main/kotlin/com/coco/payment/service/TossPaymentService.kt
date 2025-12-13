@@ -4,6 +4,7 @@ import com.coco.payment.handler.TossPaymentClient
 import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.handler.dto.TossPaymentView
 import com.coco.payment.service.dto.BillingView
+import com.coco.payment.service.dto.ConfirmBillingResult
 import org.springframework.stereotype.Service
 
 @Service
@@ -36,7 +37,7 @@ class TossPaymentService(
     fun confirmBilling(
         billingKey: String,
         confirmBillingCommand: BillingView.ConfirmBillingCommand
-    ): TossPaymentView.TossConfirmBillingBillingResponse {
+    ): BillingView.ConfirmResult.TossConfirmResult {
         val responseResult = runCatching {
             tossPaymentClient.confirmBilling(
                 billingKey,
@@ -54,7 +55,20 @@ class TossPaymentService(
         // 통일된 dto로 반환
         responseResult
             .onSuccess {
-                return it
+                return BillingView.ConfirmResult.TossConfirmResult(
+                    PaymentSystem.TOSS,
+                    it.paymentKey,
+                    it.type,
+                    it.mId,
+                    it.lastTransactionKey,
+                    it.orderId,
+                    it.totalAmount,
+                    it.balanceAmount,
+                    it.status,
+                    it.requestedAt,
+                    it.approvedAt,
+                    it.taxFreeAmount
+                )
             }
             .onFailure {
                 throw it

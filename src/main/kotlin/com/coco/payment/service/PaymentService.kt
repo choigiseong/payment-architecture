@@ -3,16 +3,12 @@ package com.coco.payment.service
 import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.persistence.model.CustomerPaymentBillingKey
 import com.coco.payment.service.dto.BillingView
-import com.coco.payment.handler.dto.ConfirmBillingResponse
 import com.coco.payment.service.strategy.PaymentStrategyManager
 import org.springframework.stereotype.Service
 
 @Service
 class PaymentService(
     private val customerService: CustomerService,
-    private val tossPaymentService: TossPaymentService,
-    private val ledgerService: LedgerService,
-    private val tossPaymentEventService: TossPaymentEventService,
     private val strategyManager: PaymentStrategyManager
 ) {
 
@@ -33,7 +29,7 @@ class PaymentService(
 
     fun confirmBilling(
         confirmBillingCommand: BillingView.ConfirmBillingCommand
-    ): ConfirmBillingResponse {
+    ): BillingView.ConfirmResult {
         val billingKeyModel =
             findBillingKey(confirmBillingCommand.customerKey, confirmBillingCommand.paymentSystem)
                 ?: throw IllegalArgumentException("Billing key not found")
@@ -47,7 +43,7 @@ class PaymentService(
 
     fun successBilling(
         customerKey: String,
-        providerResponse: ConfirmBillingResponse
+        providerResponse: BillingView.ConfirmResult
     ) {
         val customer = customerService.findByCustomerKey(customerKey)
         val strategy = strategyManager.resolve(providerResponse.paymentSystem)

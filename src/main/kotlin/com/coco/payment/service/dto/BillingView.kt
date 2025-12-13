@@ -22,4 +22,23 @@ interface BillingView {
         val orderName: String
     )
 
+    interface ConfirmResult {
+        val paymentSystem: PaymentSystem
+
+        data class TossConfirmResult(
+            override val paymentSystem: PaymentSystem = PaymentSystem.TOSS,
+            val paymentKey: String,
+            val type: String,
+            val mId: String,
+            val lastTransactionKey: String,
+            val orderId: String,
+            val totalAmount: Long,
+            val balanceAmount: Long,
+            val status: String,
+            val requestedAt: Instant,
+            val approvedAt: Instant,
+            val taxFreeAmount: Long
+        ) : ConfirmResult
+    }
+
 }

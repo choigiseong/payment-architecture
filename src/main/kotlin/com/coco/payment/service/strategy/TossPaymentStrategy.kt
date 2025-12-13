@@ -1,12 +1,10 @@
 package com.coco.payment.service.strategy
 
-import com.coco.payment.handler.dto.TossPaymentView
 import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.service.TossPaymentService
 import com.coco.payment.service.dto.BillingView
 import com.coco.payment.service.LedgerService
 import com.coco.payment.service.TossPaymentEventService
-import com.coco.payment.handler.dto.ConfirmBillingResponse
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 
@@ -21,16 +19,16 @@ class TossPaymentStrategy(
     override fun confirmBilling(
         billingKey: String,
         command: BillingView.ConfirmBillingCommand
-    ): ConfirmBillingResponse {
+    ): BillingView.ConfirmResult.TossConfirmResult {
         return tossPaymentService.confirmBilling(billingKey, command)
     }
 
     @Transactional
     override fun onSuccess(
         customerId: Long,
-        providerResponse: ConfirmBillingResponse
+        providerResponse: BillingView.ConfirmResult
     ) {
-        if (providerResponse !is TossPaymentView.TossConfirmBillingBillingResponse) {
+        if (providerResponse !is BillingView.ConfirmResult.TossConfirmResult) {
             throw IllegalArgumentException("Provider response is not TossPaymentConfirmResponse")
         }
         tossPaymentEventService.createTossPaymentEvent(customerId, providerResponse)
