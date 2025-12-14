@@ -38,4 +38,8 @@ class Customer(
     fun getCustomerKey(): String {
         return "customer-${this.id}"
     }
+
+    fun findLastBillingKey(): CustomerPaymentBillingKey? {
+        return billingKeys.lastOrNull()
+    }
 }

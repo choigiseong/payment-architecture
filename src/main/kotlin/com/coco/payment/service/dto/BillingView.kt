@@ -13,7 +13,7 @@ interface BillingView {
     )
 
     data class ConfirmBillingCommand(
-        val customerKey: String,
+        val customerSeq: Long,
         val paymentSystem: PaymentSystem,
         val amount: Long,
         val customerEmail: String,

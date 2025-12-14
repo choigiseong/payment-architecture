@@ -5,5 +5,10 @@ enum class InvoiceStatus(val description: String) {
     DUE("청구중"),
     PAID("결제완료"),
     FAILED("결제실패"),
-    CANCELLED("취소")
+    CANCELLED("취소");
+
+    fun isPaid(): Boolean {
+        return this == PAID
+    }
+
 }

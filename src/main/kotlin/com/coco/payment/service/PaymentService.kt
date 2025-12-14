@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service
 @Service
 class PaymentService(
     private val customerService: CustomerService,
+//    private val paymentAttemptService: PaymentAttemptService,
     private val strategyManager: PaymentStrategyManager
 ) {
 
@@ -22,8 +23,8 @@ class PaymentService(
         )
     }
 
-    fun findBillingKey(customerKey: String, paymentSystem: PaymentSystem): CustomerPaymentBillingKey? {
-        val customer = customerService.findByCustomerKey(customerKey)
+    fun findBillingKey(customerSeq: Long, paymentSystem: PaymentSystem): CustomerPaymentBillingKey? {
+        val customer = customerService.findById(customerSeq)
         return customer.billingKeys.find { it.paymentSystem == paymentSystem }
     }
 
@@ -31,7 +32,7 @@ class PaymentService(
         confirmBillingCommand: BillingView.ConfirmBillingCommand
     ): BillingView.ConfirmResult {
         val billingKeyModel =
-            findBillingKey(confirmBillingCommand.customerKey, confirmBillingCommand.paymentSystem)
+            findBillingKey(confirmBillingCommand.customerSeq, confirmBillingCommand.paymentSystem)
                 ?: throw IllegalArgumentException("Billing key not found")
 
         val strategy = strategyManager.resolve(confirmBillingCommand.paymentSystem)
@@ -42,12 +43,11 @@ class PaymentService(
 
 
     fun successBilling(
-        customerKey: String,
+        customerSeq: Long,
         confirmResult: BillingView.ConfirmResult
     ) {
-        val customer = customerService.findByCustomerKey(customerKey)
         val strategy = strategyManager.resolve(confirmResult.paymentSystem)
-        strategy.onSuccess(customer.id!!, confirmResult)
+        strategy.onSuccess(customerSeq, confirmResult)
     }
 
 }

@@ -43,23 +43,23 @@ class TossPaymentApiController(
     fun confirmBilling(@RequestBody request: TossBillingView.ConfirmBillingRequest): ResponseEntity<TossBillingView.ConfirmBillingResponse> {
         // todo 이제 해야하는 것은 결제를 할 수 있냐? 없냐?
 
-
-        val confirmBillingResult = paymentService.confirmBilling(
-            BillingView.ConfirmBillingCommand(
-                request.customerKey,
-                paymentSystem,
-                request.amount,
-                request.customerEmail,
-                request.customerName,
-                request.orderId,
-                request.orderName
-            )
-        )
-
-        paymentService.successBilling(
-            request.customerKey,
-            confirmBillingResult
-        )
+//
+//        val confirmBillingResult = paymentService.confirmBilling(
+//            BillingView.ConfirmBillingCommand(
+//                request.customerKey,
+//                paymentSystem,
+//                request.amount,
+//                request.customerEmail,
+//                request.customerName,
+//                request.orderId,
+//                request.orderName
+//            )
+//        )
+//
+//        paymentService.successBilling(
+//            request.customerKey,
+//            confirmBillingResult
+//        )
 
 
 

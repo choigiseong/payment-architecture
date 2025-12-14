@@ -21,20 +21,20 @@ class CustomerService(
         return customerRepository.findById(id).orElseThrow { IllegalArgumentException("Customer not found") }
     }
 
-    fun findCustomerById(customerId: Long): Customer {
-        return customerRepository.findById(customerId).orElseThrow { IllegalArgumentException("Customer not found") }
+    fun findById(id: Long): Customer {
+        return customerRepository.findById(id).orElseThrow { IllegalArgumentException("Customer not found") }
     }
 
+
     @Transactional
-    fun addBillingKey(customerId: Long, billingKeyResult: BillingView.BillingKeyResult) {
-        val customer = findCustomerById(customerId)
+    fun addBillingKey(id: Long, billingKeyResult: BillingView.BillingKeyResult) {
+        val customer = findById(id)
         customer.addBillingKey(
             billingKeyResult.paymentSystem,
             billingKeyResult.billingKey,
             billingKeyResult.cardNumber,
             billingKeyResult.cardCompany
         )
-        // Ensure persistence when outside of dirty tracking or for clarity
         customerRepository.save(customer)
     }
 }
