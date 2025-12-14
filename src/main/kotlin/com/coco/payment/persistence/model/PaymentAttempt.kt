@@ -24,12 +24,12 @@ class PaymentAttempt(
     @Column(nullable = false)
     var paymentSystem: PaymentSystem,
     @Column(nullable = false)
-    var paymentKey: String,
+    var pgTransactionKey: String? = null,
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     var status: PaymentAttemptStatus = PaymentAttemptStatus.PENDING,
     @Column(nullable = true)
-    var requestedAt: Instant? = null,
+    var requestedAt: Instant,
     @Column(nullable = true)
     var approvedAt: Instant? = null,
     @Column(nullable = true)

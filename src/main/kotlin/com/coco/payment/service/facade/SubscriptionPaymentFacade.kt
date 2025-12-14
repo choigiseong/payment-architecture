@@ -7,6 +7,7 @@ import com.coco.payment.service.PaymentService
 import com.coco.payment.service.SubscriptionService
 import com.coco.payment.service.dto.BillingView
 import org.springframework.stereotype.Service
+import java.time.Instant
 import java.time.LocalDate
 
 
@@ -24,7 +25,7 @@ class SubscriptionPaymentFacade(
 
     fun paymentSubscribe(
         customer: Customer,
-        now: LocalDate
+        at: Instant
     ) {
         val subscription = subscriptionService.findSubscriptionByCustomerSeq(customer.id!!)
         val invoice = invoiceService.findOrCreateCurrent(

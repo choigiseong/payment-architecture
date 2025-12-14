@@ -5,12 +5,13 @@ import com.coco.payment.persistence.model.CustomerPaymentBillingKey
 import com.coco.payment.service.dto.BillingView
 import com.coco.payment.service.strategy.PaymentStrategyManager
 import org.springframework.stereotype.Service
+import java.time.Instant
 
 @Service
 class PaymentService(
     private val customerService: CustomerService,
-//    private val paymentAttemptService: PaymentAttemptService,
-    private val strategyManager: PaymentStrategyManager
+    private val strategyManager: PaymentStrategyManager,
+    private val paymentAttemptService: PaymentAttemptService,
 ) {
 
     fun registerBillingKey(
@@ -29,16 +30,27 @@ class PaymentService(
     }
 
     fun confirmBilling(
+        invoiceSeq: Long,
+        requestedAt: Instant,
         confirmBillingCommand: BillingView.ConfirmBillingCommand
     ): BillingView.ConfirmResult {
         val billingKeyModel =
             findBillingKey(confirmBillingCommand.customerSeq, confirmBillingCommand.paymentSystem)
                 ?: throw IllegalArgumentException("Billing key not found")
 
+        paymentAttemptService.createPaymentAttempt(
+            invoiceSeq,
+            confirmBillingCommand.paymentSystem,
+            requestedAt
+        )
+
         val strategy = strategyManager.resolve(confirmBillingCommand.paymentSystem)
-        return strategy.confirmBilling(
+        val result = strategy.confirmBilling(
             billingKeyModel.billingKey, confirmBillingCommand
         )
+        // todo paymentAttemptService 상태 업데이트? db 장애는?
+
+        return result
     }
 
 
