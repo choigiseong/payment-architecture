@@ -5,9 +5,9 @@ import org.springframework.stereotype.Service
 
 @Service
 class PaymentStrategyManager(
-    private val strategies: List<PaymentStrategy>
+    private val strategies: List<BillingPaymentStrategy>
 ) {
-    fun resolve(system: PaymentSystem): PaymentStrategy =
+    fun resolve(system: PaymentSystem): BillingPaymentStrategy =
         strategies.firstOrNull { it.supports() == system }
             ?: throw IllegalArgumentException("Payment strategy not found for $system")
 }

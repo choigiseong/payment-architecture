@@ -3,16 +3,14 @@ package com.coco.payment.service
 import com.coco.payment.persistence.enumerator.BillingCycle
 import com.coco.payment.persistence.enumerator.SubscriptionStatus
 import com.coco.payment.persistence.model.Subscription
-import com.coco.payment.persistence.repository.InvoiceRepository
 import com.coco.payment.persistence.repository.SubscriptionRepository
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
 
 @Service
 class SubscriptionService(
     private val subscriptionRepository: SubscriptionRepository,
-    private val paymentService: PaymentService
-//    private val invoiceRepository: InvoiceRepository
 ) {
     fun createSubscription(customerSeq: Long, amount: Long, cycle: BillingCycle, nextBillingDate: LocalDate) {
         subscriptionRepository.save(
@@ -39,7 +37,15 @@ class SubscriptionService(
             ?: throw IllegalArgumentException("Subscription not found")
     }
 
-    fun ss() {
+    @Transactional
+    fun renew(id: Long, periodEnd: LocalDate) {
+        val affectedRows = subscriptionRepository.renewSubscription(
+            id,
+            periodEnd,
+        )
+        if (affectedRows != 1L) {
+            throw IllegalArgumentException("Subscription not found")
+        }
 
     }
 }

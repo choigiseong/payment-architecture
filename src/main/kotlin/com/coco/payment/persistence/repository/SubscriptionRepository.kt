@@ -2,6 +2,7 @@ package com.coco.payment.persistence.repository
 
 import com.coco.payment.persistence.enumerator.SubscriptionStatus
 import com.coco.payment.persistence.model.Subscription
+import org.hibernate.annotations.processing.SQL
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 import java.time.LocalDate
@@ -11,4 +12,9 @@ interface SubscriptionRepository : JpaRepository<Subscription, Long> {
     fun findByCustomerSeq(customerSeq: Long): Subscription?
     fun findByNextBillingDate(now: LocalDate, status: SubscriptionStatus): List<Subscription>
     fun findByStatus(status: SubscriptionStatus): List<Subscription>
+
+    @SQL(
+        "UPDATE subscription SET next_billing_date = :periodEnd WHERE id = :id"
+    )
+    fun renewSubscription(id: Long, periodEnd: LocalDate): Long
 }

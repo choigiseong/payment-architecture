@@ -6,6 +6,7 @@ import com.coco.payment.service.InvoiceService
 import com.coco.payment.service.PaymentService
 import com.coco.payment.service.SubscriptionService
 import com.coco.payment.service.dto.BillingView
+import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import java.time.Instant
 import java.time.LocalDate
@@ -16,7 +17,6 @@ class SubscriptionPaymentFacade(
     private val subscriptionService: SubscriptionService,
     private val paymentService: PaymentService,
     private val invoiceService: InvoiceService,
-    private val customerService: CustomerService,
 ) {
 
     // 구독 결제. 앞에서 이미 결제할 애들을 고른다
@@ -44,9 +44,12 @@ class SubscriptionPaymentFacade(
 
         val billingKey = customer.findLastBillingKey() ?: throw IllegalArgumentException("Billing key not found")
         val paymentSystem = billingKey.paymentSystem
-        //try catch or retry해야한다. 연체
-        paymentService.confirmBilling(
-            // todo paymentattempt status에도 넣고하자.
+        //try catch or retry해야한다. 연체..
+
+        // 타임 아웃 처리..
+        val confirmResult = paymentService.confirmBilling(
+            invoice.id!!,
+            at,
             BillingView.ConfirmBillingCommand(
                 customer.id!!,
                 paymentSystem,
@@ -57,7 +60,26 @@ class SubscriptionPaymentFacade(
                 subscription.name
             )
         )
-        // 뭔가..
-        paymentService.successBilling()
+
+        try {
+            paymentService.successBilling(
+                customer.id!!,
+                confirmResult
+            )
+        } catch (e: Exception) {
+            // logging 결제는 성공했지만, 이후 비즈니스 로직 실패. 성공으로 응답.
+            // 커버는 콜백과 스케줄러.
+        }
+    }
+
+    // 이걸로 비즈니스 예외 대응 한다.
+    @Scheduled
+    fun schedule() {
+        // pending인 애 조회
+        // 이후 토스 조회
+        // 이후 업데이트
+        val now = Instant.now()
+//        invoiceService.findPendingInvoice()
+
     }
 }

@@ -12,6 +12,13 @@ import jakarta.persistence.Table
 import java.time.Instant
 import java.time.LocalDate
 
+// Invoice = 최종 결제 결과
+
+// PaymentAttempt 실패
+//≠ Invoice 실패
+
+// 3번의 재시도는 PaymentAttempt에 3번 쌓이고, 그때동안 invoice는 PENDING 상태
+// 3번의 재시도 후에도 실패하면 invoice는 FAILED 상태
 @Entity
 @Table(name = "invoice")
 class Invoice(
@@ -34,7 +41,7 @@ class Invoice(
     @Column(nullable = true)
     var paidAt: Instant? = null,
     @Column(nullable = true)
-    var lastAttemptAt: Instant? = null,
+    var lastAttemptAt: Instant? = null, // 뭐지?
     @Column(nullable = false, unique = true)
     var externalOrderKey: String,
     @Column(nullable = false)

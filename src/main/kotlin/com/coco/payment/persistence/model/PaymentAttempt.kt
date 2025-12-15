@@ -12,6 +12,7 @@ import jakarta.persistence.Id
 import jakarta.persistence.Table
 import java.time.Instant
 
+// 신규 시도 시 insert
 @Entity
 @Table(name = "payment_attempt")
 class PaymentAttempt(

@@ -1,19 +1,25 @@
 package com.coco.payment.service.strategy
 
 import com.coco.payment.persistence.enumerator.PaymentSystem
+import com.coco.payment.service.InvoiceService
 import com.coco.payment.service.TossPaymentService
 import com.coco.payment.service.dto.BillingView
 import com.coco.payment.service.LedgerService
+import com.coco.payment.service.PaymentAttemptService
+import com.coco.payment.service.SubscriptionService
 import com.coco.payment.service.TossPaymentEventService
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 
 @Component
-class TossPaymentStrategy(
+class TossBillingPaymentStrategy(
     private val tossPaymentService: TossPaymentService,
     private val tossPaymentEventService: TossPaymentEventService,
+    private val invoiceService: InvoiceService,
+    private val paymentAttemptService: PaymentAttemptService,
+    private val subscriptionService: SubscriptionService,
     private val ledgerService: LedgerService
-) : PaymentStrategy {
+) : BillingPaymentStrategy {
     override fun supports(): PaymentSystem = PaymentSystem.TOSS
 
     override fun confirmBilling(
@@ -31,6 +37,23 @@ class TossPaymentStrategy(
         if (confirmResult !is BillingView.ConfirmResult.TossConfirmResult) {
             throw IllegalArgumentException("Provider response is not TossPaymentConfirmResponse")
         }
+        val invoice = invoiceService.findByExternalKey(
+            confirmResult.orderId,
+        )
+        subscriptionService.renew(
+            invoice.subscriptionSeq,
+            invoice.periodEnd
+        )
+        invoiceService.paid(
+            invoice.id!!,
+            confirmResult.approvedAt,
+        )
+        paymentAttemptService.success(
+            invoice.id!!,
+            confirmResult.approvedAt,
+            confirmResult.paymentKey,
+        )
+
         val ledger = ledgerService.createLedger(
             customerSeq,
         )
@@ -39,6 +62,6 @@ class TossPaymentStrategy(
             ledger.id!!,
             confirmResult
         )
-
     }
 }
+

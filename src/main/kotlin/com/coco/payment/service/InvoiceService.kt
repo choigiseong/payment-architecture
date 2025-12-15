@@ -1,14 +1,17 @@
 package com.coco.payment.service
 
 import com.coco.payment.persistence.enumerator.BillingCycle
+import com.coco.payment.persistence.enumerator.InvoiceStatus
 import com.coco.payment.persistence.model.Invoice
 import com.coco.payment.persistence.repository.InvoiceRepository
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
 import java.time.LocalDate
 
 @Service
 class InvoiceService(
-    private val invoiceRepository: InvoiceRepository
+    private val invoiceRepository: InvoiceRepository,
 ) {
 
     fun findInvoiceBySubscriptionSeq(subscriptionSeq: Long): List<Invoice> {
@@ -45,5 +48,26 @@ class InvoiceService(
             periodEnd = periodEnd,
             externalOrderKey = externalOrderKey
         )
+    }
+
+    fun findByExternalKey(
+        externalOrderKey: String
+    ): Invoice {
+        return invoiceRepository.findByExternalOrderKey(externalOrderKey)
+            ?: throw IllegalArgumentException("Invoice not found")
+    }
+
+    @Transactional
+    fun paid(id: Long, paidAt: Instant) {
+        val affectedRows = invoiceRepository.paid(
+            id,
+            paidAt,
+            setOf(InvoiceStatus.PENDING),
+            InvoiceStatus.PAID
+        )
+
+        if (affectedRows != 1L) {
+            throw IllegalArgumentException("Invoice not found")
+        }
     }
 }

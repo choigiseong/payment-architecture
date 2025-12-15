@@ -45,12 +45,9 @@ class PaymentService(
         )
 
         val strategy = strategyManager.resolve(confirmBillingCommand.paymentSystem)
-        val result = strategy.confirmBilling(
+        return strategy.confirmBilling(
             billingKeyModel.billingKey, confirmBillingCommand
         )
-        // todo paymentAttemptService 상태 업데이트? db 장애는?
-
-        return result
     }
 
 
