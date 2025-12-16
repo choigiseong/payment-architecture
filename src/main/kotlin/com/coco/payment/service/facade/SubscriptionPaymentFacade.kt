@@ -34,6 +34,7 @@ class SubscriptionPaymentFacade(
             subscription.nextBillingDate,
             subscription.cycle,
             subscription.amount,
+            at,
         )
         if (invoice.isPaid()) {
             // 결제에 성공했었다.
@@ -46,7 +47,9 @@ class SubscriptionPaymentFacade(
         val paymentSystem = billingKey.paymentSystem
         //try catch or retry해야한다. 연체..
 
-        // 타임 아웃 처리..
+
+
+        // 타임 아웃 처리.. 성공 실패 알 수 없음에 대한 처리하자.
         val confirmResult = paymentService.confirmBilling(
             invoice.id!!,
             at,

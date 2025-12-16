@@ -37,11 +37,11 @@ class Invoice(
     @Column(nullable = false)
     var status: InvoiceStatus = InvoiceStatus.PENDING,
     @Column(nullable = true)
-    var dueAt: Instant? = null, // todo 필요할까?
+    var dueAt: Instant? = null, // todo 연체 시 사용 예정.
     @Column(nullable = true)
     var paidAt: Instant? = null,
     @Column(nullable = true)
-    var lastAttemptAt: Instant? = null, // 뭐지?
+    var lastAttemptAt: Instant, // todo 마지막 시도 시간 retry 개념 연체 시 사용 예정.
     @Column(nullable = false, unique = true)
     var externalOrderKey: String,
     @Column(nullable = false)

@@ -25,6 +25,7 @@ class InvoiceService(
         nextBillingDate: LocalDate,
         cycle: BillingCycle,
         amount: Long,
+        at: Instant,
     ): Invoice {
         val periodStart = nextBillingDate
         val periodEnd = cycle.getPeriodEnd(nextBillingDate)
@@ -46,7 +47,8 @@ class InvoiceService(
             amount = amount,
             periodStart = periodStart,
             periodEnd = periodEnd,
-            externalOrderKey = externalOrderKey
+            externalOrderKey = externalOrderKey,
+            lastAttemptAt = at,
         )
     }
 
