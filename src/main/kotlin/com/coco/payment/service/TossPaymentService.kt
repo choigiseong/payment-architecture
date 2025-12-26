@@ -67,7 +67,7 @@ class TossPaymentService(
         )
     }
 
-    // 흠
+    // todo 흠 맘에 안들지만, 이게 중요한 목적이 아니니.
     fun findTransaction(
         externalOrderKey: String
     ): PgResult<BillingView.TransactionResult.TossTransactionResult> {
