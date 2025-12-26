@@ -1,5 +1,7 @@
 package com.coco.payment.config
 
+import com.coco.payment.handler.paymentgateway.TossErrorDecoder
+import com.fasterxml.jackson.databind.ObjectMapper
 import feign.RequestInterceptor
 import feign.Response
 import feign.codec.ErrorDecoder
@@ -25,4 +27,9 @@ class FeignConfig(
             template.header("Content-Type", "application/json")
         }
     }
+
+    @Bean
+    fun tossErrorDecoder(
+        objectMapper: ObjectMapper
+    ): ErrorDecoder = TossErrorDecoder(objectMapper)
 }

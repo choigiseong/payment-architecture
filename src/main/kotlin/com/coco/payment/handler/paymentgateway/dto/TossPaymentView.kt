@@ -63,8 +63,25 @@ interface TossPaymentView {
         val requestedAt: Instant,
         val approvedAt: Instant,
         val taxFreeAmount: Long
+    ) {
+        fun isDone(): Boolean {
+            return status == "DONE"
+        }
+
+        fun isFail(): Boolean {
+            return status == "ABORTED" || status == "EXPIRED"
+        }
+    }
+
+    data class TossErrorResponse(
+        val version: String,
+        val traceId: String,
+        val error: TossErrorDetail
     )
 
-
+    data class TossErrorDetail(
+        val code: String,
+        val message: String
+    )
 
 }

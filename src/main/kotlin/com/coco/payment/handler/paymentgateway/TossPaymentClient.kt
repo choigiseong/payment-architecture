@@ -18,16 +18,16 @@ interface TossPaymentClient {
     @PostMapping("\${payment.toss.api.endpoint.billing-key-issue}")
     fun issueBillingKey(
         @RequestBody request: TossPaymentView.TossBillingKeyRequest
-    ): ResponseEntity<TossPaymentView.TossBillingKeyResponse>
+    ): TossPaymentView.TossBillingKeyResponse
 
     @PostMapping("\${payment.toss.api.endpoint.confirm-billing}/{billingKey}")
     fun confirmBilling(
         @PathVariable billingKey: String,
         @RequestBody request: TossPaymentView.TossConfirmBillingRequest
-    ): ResponseEntity<TossPaymentView.TossConfirmBillingBillingResponse>
+    ): TossPaymentView.TossConfirmBillingBillingResponse
 
     @GetMapping("\${payment.toss.api.endpoint.transaction}/{externalOrderKey}")
     fun findTransaction(
         @PathVariable externalOrderKey: String
-    ): ResponseEntity<Any>
+    ): TossPaymentView.TossTransactionResponse
 }

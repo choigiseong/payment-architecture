@@ -1,6 +1,7 @@
 package com.coco.payment.service
 
 import com.coco.payment.handler.paymentgateway.PgError
+import com.coco.payment.handler.paymentgateway.TossApiException
 import com.coco.payment.handler.paymentgateway.TossErrorResolver
 import com.coco.payment.handler.paymentgateway.TossPaymentClient
 import com.coco.payment.handler.paymentgateway.dto.PgResult
@@ -26,16 +27,11 @@ class TossPaymentService(
                 authKey
             )
         )
-        if (response.statusCode.isError) {
-            throw IllegalArgumentException("TossPaymentService.issueBillingKey")
-        }
-
-        val body = response.body ?: throw IllegalArgumentException("TossPaymentService.issueBillingKey")
         return BillingView.BillingKeyResult(
             PaymentSystem.TOSS,
-            body.billingKey,
-            body.cardNumber,
-            body.cardCompany
+            response.billingKey,
+            response.cardNumber,
+            response.cardCompany
         )
     }
 
@@ -55,67 +51,61 @@ class TossPaymentService(
             )
         )
 
-        if (response.statusCode.isError) {
-            throw IllegalArgumentException("TossPaymentService.confirmBilling")
-        }
-
-        val body = response.body ?: throw IllegalArgumentException("TossPaymentService.confirmBilling")
         return BillingView.ConfirmResult.TossConfirmResult(
             PaymentSystem.TOSS,
-            body.paymentKey,
-            body.type,
-            body.mId,
-            body.lastTransactionKey,
-            body.orderId,
-            body.totalAmount,
-            body.balanceAmount,
-            body.status,
-            body.requestedAt,
-            body.approvedAt,
-            body.taxFreeAmount
+            response.paymentKey,
+            response.type,
+            response.mId,
+            response.lastTransactionKey,
+            response.orderId,
+            response.totalAmount,
+            response.balanceAmount,
+            response.status,
+            response.requestedAt,
+            response.approvedAt,
+            response.taxFreeAmount
         )
     }
 
-    //todo 확인
+    // 흠
     fun findTransaction(
         externalOrderKey: String
     ): PgResult<BillingView.TransactionResult.TossTransactionResult> {
+        return try {
+            val body = tossPaymentClient.findTransaction(externalOrderKey)
 
-        val response = tossPaymentClient.findTransaction(externalOrderKey)
+            if (body.isDone()) {
+                PgResult.Success(
+                    BillingView.TransactionResult.TossTransactionResult(
+                        PaymentSystem.TOSS,
+                        body.paymentKey,
+                        body.type,
+                        body.mId,
+                        body.lastTransactionKey,
+                        body.orderId,
+                        body.totalAmount,
+                        body.balanceAmount,
+                        body.status,
+                        body.requestedAt,
+                        body.approvedAt,
+                        body.taxFreeAmount,
+                    )
+                )
+            } else if (body.isFail()) {
+                PgResult.Fail(
+                    PgError("PgErrorCode.BUSINESS", "결제 실패 상태")
+                )
+            } else {
+                PgResult.Retryable(
+                    PgError("PgErrorCode.UNKNOWN", "확정되지 않은 결제 상태")
+                )
+            }
 
-        if (response.statusCode.isError) {
-            return tossErrorResolver.resolve(
-                response.statusCode,
-                response.body?.code
+        } catch (e: TossApiException) {
+            tossErrorResolver.findTransactionErrorResolver(
+                e.status,
+                e.code
             )
         }
-
-        val body = response.body
-            ?: return PgResult.Retryable(
-                PgError(
-                    PgErrorCode.UNKNOWN,
-                    "응답 바디 없음",
-                    null
-                )
-            )
-
-        return PgResult.Success(
-            BillingView.TransactionResult.TossTransactionResult(
-                PaymentSystem.TOSS,
-                body.paymentKey,
-                body.type,
-                body.mId,
-                body.lastTransactionKey,
-                body.orderId,
-                body.totalAmount,
-                body.balanceAmount,
-                body.status,
-                body.requestedAt,
-                body.approvedAt,
-                body.taxFreeAmount,
-            )
-        )
     }
-
-
 }
