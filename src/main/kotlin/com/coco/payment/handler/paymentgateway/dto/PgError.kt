@@ -1,4 +1,4 @@
-package com.coco.payment.handler.paymentgateway
+package com.coco.payment.handler.paymentgateway.dto
 
 data class PgError(
     val code: String,

@@ -1,6 +1,6 @@
 package com.coco.payment.service
 
-import com.coco.payment.handler.paymentgateway.PgError
+import com.coco.payment.handler.paymentgateway.dto.PgError
 import com.coco.payment.handler.paymentgateway.TossApiException
 import com.coco.payment.handler.paymentgateway.TossErrorResolver
 import com.coco.payment.handler.paymentgateway.TossPaymentClient

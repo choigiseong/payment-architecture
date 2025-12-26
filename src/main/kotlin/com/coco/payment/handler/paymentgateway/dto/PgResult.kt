@@ -1,6 +1,6 @@
 package com.coco.payment.handler.paymentgateway.dto
 
-import com.coco.payment.handler.paymentgateway.PgError
+import com.coco.payment.handler.paymentgateway.dto.PgError
 
 /**
  * 재시도 / 복구 를 판단해야 하는가?

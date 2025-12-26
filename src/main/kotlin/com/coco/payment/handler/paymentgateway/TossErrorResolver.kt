@@ -1,5 +1,6 @@
 package com.coco.payment.handler.paymentgateway
 
+import com.coco.payment.handler.paymentgateway.dto.PgError
 import com.coco.payment.handler.paymentgateway.dto.PgResult
 
 class TossErrorResolver {
