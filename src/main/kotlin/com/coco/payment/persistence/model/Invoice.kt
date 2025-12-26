@@ -41,6 +41,10 @@ class Invoice(
     @Column(nullable = true)
     var paidAt: Instant? = null,
     @Column(nullable = true)
+    var failedAt: Instant? = null, // 최종 실패 시점 기록 추가
+    @Column(nullable = true)
+    var attemptCount: Int = 0,
+    @Column(nullable = true)
     var lastAttemptAt: Instant, // todo 마지막 시도 시간 retry 개념 연체 시 사용 예정.
     @Column(nullable = false, unique = true)
     var externalOrderKey: String,
@@ -54,7 +58,12 @@ class Invoice(
     }
 
     companion object {
-        fun buildExternalOrderKey(consumerSeq: Long, subscriptionSeq: Long, periodStart: LocalDate, periodEnd: LocalDate): String {
+        fun buildExternalOrderKey(
+            consumerSeq: Long,
+            subscriptionSeq: Long,
+            periodStart: LocalDate,
+            periodEnd: LocalDate
+        ): String {
             return "invoice-${consumerSeq}-${subscriptionSeq}-${periodStart}-${periodEnd}"
         }
     }

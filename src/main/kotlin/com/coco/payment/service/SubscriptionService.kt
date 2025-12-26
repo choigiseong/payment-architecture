@@ -7,11 +7,31 @@ import com.coco.payment.persistence.repository.SubscriptionRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
+import java.util.Optional
 
 @Service
 class SubscriptionService(
     private val subscriptionRepository: SubscriptionRepository,
 ) {
+
+
+    fun findById(id: Long): Subscription {
+        return subscriptionRepository.findById(id)
+            .orElseThrow { IllegalArgumentException("Subscription not found") }
+    }
+
+    fun findTodaySubscription(now: LocalDate): List<Subscription> {
+        val subscriptions = subscriptionRepository.findByNextBillingDate(now, SubscriptionStatus.ACTIVE)
+        val dueSubscriptions = subscriptionRepository.findByStatus(SubscriptionStatus.PAST_DUE)
+        return subscriptions + dueSubscriptions
+    }
+
+    fun findSubscriptionByCustomerSeq(customerSeq: Long): Subscription {
+        return subscriptionRepository.findByCustomerSeq(customerSeq)
+            ?: throw IllegalArgumentException("Subscription not found")
+    }
+
+
     fun createSubscription(customerSeq: Long, amount: Long, cycle: BillingCycle, nextBillingDate: LocalDate) {
         subscriptionRepository.save(
             Subscription(
@@ -24,17 +44,6 @@ class SubscriptionService(
                 nextBillingDate,
             )
         )
-    }
-
-    fun findTodaySubscription(now: LocalDate): List<Subscription> {
-        val subscriptions = subscriptionRepository.findByNextBillingDate(now, SubscriptionStatus.ACTIVE)
-        val dueSubscriptions = subscriptionRepository.findByStatus(SubscriptionStatus.PAST_DUE)
-        return subscriptions + dueSubscriptions
-    }
-
-    fun findSubscriptionByCustomerSeq(customerSeq: Long): Subscription {
-        return subscriptionRepository.findByCustomerSeq(customerSeq)
-            ?: throw IllegalArgumentException("Subscription not found")
     }
 
     @Transactional

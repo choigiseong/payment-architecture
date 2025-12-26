@@ -1,21 +1,18 @@
 package com.coco.payment.service.facade
 
 import com.coco.payment.persistence.model.Customer
-import com.coco.payment.service.CustomerService
 import com.coco.payment.service.InvoiceService
-import com.coco.payment.service.PaymentService
+import com.coco.payment.service.facade.PaymentFacade
 import com.coco.payment.service.SubscriptionService
 import com.coco.payment.service.dto.BillingView
-import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import java.time.Instant
-import java.time.LocalDate
 
 
 @Service
 class SubscriptionPaymentFacade(
     private val subscriptionService: SubscriptionService,
-    private val paymentService: PaymentService,
+    private val paymentFacade: PaymentFacade,
     private val invoiceService: InvoiceService,
 ) {
 
@@ -47,10 +44,7 @@ class SubscriptionPaymentFacade(
         val paymentSystem = billingKey.paymentSystem
         //try catch or retry해야한다. 연체..
 
-
-
-        // 타임 아웃 처리.. 성공 실패 알 수 없음에 대한 처리하자.
-        val confirmResult = paymentService.confirmBilling(
+        val confirmResult = paymentFacade.confirmBilling(
             invoice.id!!,
             at,
             BillingView.ConfirmBillingCommand(
@@ -65,7 +59,7 @@ class SubscriptionPaymentFacade(
         )
 
         try {
-            paymentService.successBilling(
+            paymentFacade.successBilling(
                 customer.id!!,
                 confirmResult
             )
@@ -75,14 +69,4 @@ class SubscriptionPaymentFacade(
         }
     }
 
-    // 이걸로 비즈니스 예외 대응 한다.
-    @Scheduled
-    fun schedule() {
-        // pending인 애 조회
-        // 이후 토스 조회
-        // 이후 업데이트
-        val now = Instant.now()
-//        invoiceService.findPendingInvoice()
-
-    }
 }

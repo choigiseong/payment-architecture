@@ -1,10 +1,12 @@
 package com.coco.payment.service
 
-import com.coco.payment.handler.TossPaymentClient
+import com.coco.payment.handler.paymentgateway.PgError
+import com.coco.payment.handler.paymentgateway.TossErrorResolver
+import com.coco.payment.handler.paymentgateway.TossPaymentClient
+import com.coco.payment.handler.paymentgateway.dto.PgResult
 import com.coco.payment.persistence.enumerator.PaymentSystem
-import com.coco.payment.handler.dto.TossPaymentView
+import com.coco.payment.handler.paymentgateway.dto.TossPaymentView
 import com.coco.payment.service.dto.BillingView
-import com.coco.payment.service.dto.ConfirmBillingResult
 import org.springframework.stereotype.Service
 
 @Service
@@ -12,7 +14,7 @@ class TossPaymentService(
     private val tossPaymentClient: TossPaymentClient
 ) {
 
-    // todo 성공, 실패, 알 수 없음.
+    private val tossErrorResolver = TossErrorResolver()
 
     fun issueBillingKey(
         customerKey: String,
@@ -24,13 +26,16 @@ class TossPaymentService(
                 authKey
             )
         )
-        // todo result로
+        if (response.statusCode.isError) {
+            throw IllegalArgumentException("TossPaymentService.issueBillingKey")
+        }
 
+        val body = response.body ?: throw IllegalArgumentException("TossPaymentService.issueBillingKey")
         return BillingView.BillingKeyResult(
             PaymentSystem.TOSS,
-            response.billingKey,
-            response.cardNumber,
-            response.cardCompany
+            body.billingKey,
+            body.cardNumber,
+            body.cardCompany
         )
     }
 
@@ -38,42 +43,79 @@ class TossPaymentService(
         billingKey: String,
         confirmBillingCommand: BillingView.ConfirmBillingCommand
     ): BillingView.ConfirmResult.TossConfirmResult {
-        val responseResult = runCatching {
-            tossPaymentClient.confirmBilling(
-                billingKey,
-                TossPaymentView.TossConfirmBillingRequest(
-                    confirmBillingCommand.customerKey,
-                    confirmBillingCommand.amount,
-                    confirmBillingCommand.customerEmail,
-                    confirmBillingCommand.customerName,
-                    confirmBillingCommand.orderId,
-                    confirmBillingCommand.orderName
-                )
+        val response = tossPaymentClient.confirmBilling(
+            billingKey,
+            TossPaymentView.TossConfirmBillingRequest(
+                confirmBillingCommand.customerSeq.toString(),
+                confirmBillingCommand.amount,
+                confirmBillingCommand.customerEmail,
+                confirmBillingCommand.customerName,
+                confirmBillingCommand.orderId,
+                confirmBillingCommand.orderName
+            )
+        )
+
+        if (response.statusCode.isError) {
+            throw IllegalArgumentException("TossPaymentService.confirmBilling")
+        }
+
+        val body = response.body ?: throw IllegalArgumentException("TossPaymentService.confirmBilling")
+        return BillingView.ConfirmResult.TossConfirmResult(
+            PaymentSystem.TOSS,
+            body.paymentKey,
+            body.type,
+            body.mId,
+            body.lastTransactionKey,
+            body.orderId,
+            body.totalAmount,
+            body.balanceAmount,
+            body.status,
+            body.requestedAt,
+            body.approvedAt,
+            body.taxFreeAmount
+        )
+    }
+
+    //todo 확인
+    fun findTransaction(
+        externalOrderKey: String
+    ): PgResult<BillingView.TransactionResult.TossTransactionResult> {
+
+        val response = tossPaymentClient.findTransaction(externalOrderKey)
+
+        if (response.statusCode.isError) {
+            return tossErrorResolver.resolve(
+                response.statusCode,
+                response.body?.code
             )
         }
 
-        // 통일된 dto로 반환
-        responseResult
-            .onSuccess {
-                return BillingView.ConfirmResult.TossConfirmResult(
-                    PaymentSystem.TOSS,
-                    it.paymentKey,
-                    it.type,
-                    it.mId,
-                    it.lastTransactionKey,
-                    it.orderId,
-                    it.totalAmount,
-                    it.balanceAmount,
-                    it.status,
-                    it.requestedAt,
-                    it.approvedAt,
-                    it.taxFreeAmount
+        val body = response.body
+            ?: return PgResult.Retryable(
+                PgError(
+                    PgErrorCode.UNKNOWN,
+                    "응답 바디 없음",
+                    null
                 )
-            }
-            .onFailure {
-                throw it
-            }
-        throw IllegalArgumentException("TossPaymentService.confirmBilling")
+            )
+
+        return PgResult.Success(
+            BillingView.TransactionResult.TossTransactionResult(
+                PaymentSystem.TOSS,
+                body.paymentKey,
+                body.type,
+                body.mId,
+                body.lastTransactionKey,
+                body.orderId,
+                body.totalAmount,
+                body.balanceAmount,
+                body.status,
+                body.requestedAt,
+                body.approvedAt,
+                body.taxFreeAmount,
+            )
+        )
     }
+
 
 }

@@ -34,6 +34,8 @@ class PaymentAttempt(
     @Column(nullable = true)
     var approvedAt: Instant? = null,
     @Column(nullable = true)
+    var failedAt: Instant? = null,
+    @Column(nullable = true)
     var failureCode: String? = null,
     @Column(nullable = true)
     var failureReason: String? = null,

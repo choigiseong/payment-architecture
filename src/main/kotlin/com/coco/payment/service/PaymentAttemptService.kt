@@ -6,6 +6,7 @@ import com.coco.payment.persistence.model.PaymentAttempt
 import com.coco.payment.persistence.repository.PaymentAttemptRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Duration
 import java.time.Instant
 
 @Service
@@ -27,9 +28,14 @@ class PaymentAttemptService(
         )
     }
 
+    fun findPendingPaymentAttempts(at: Instant): List<PaymentAttempt> {
+        val timeoutAt = at.minus(Duration.ofMinutes(PENDING_TIMEOUT_MINUTES))
+        return paymentAttemptRepository.findByStatus(timeoutAt, PaymentAttemptStatus.PENDING)
+    }
+
     @Transactional
-    fun success(invoiceSeq: Long, approvedAt: Instant, pgTransactionKey: String) {
-        val affectedRows = paymentAttemptRepository.success(
+    fun succeeded(invoiceSeq: Long, approvedAt: Instant, pgTransactionKey: String) {
+        val affectedRows = paymentAttemptRepository.succeeded(
             invoiceSeq,
             pgTransactionKey,
             setOf(PaymentAttemptStatus.PENDING),
@@ -39,5 +45,24 @@ class PaymentAttemptService(
         if (affectedRows != 1L) {
             throw IllegalArgumentException("Payment attempt not found")
         }
+    }
+
+    @Transactional
+    fun failed(invoiceSeq: Long, failedAt: Instant, failedReason: String) {
+        val affectedRows = paymentAttemptRepository.failed(
+            invoiceSeq,
+            setOf(PaymentAttemptStatus.PENDING),
+            PaymentAttemptStatus.FAILED,
+            failedReason,
+            failedAt
+        )
+        if (affectedRows != 1L) {
+            throw IllegalArgumentException("Payment attempt not found")
+        }
+    }
+
+
+    companion object {
+        private const val PENDING_TIMEOUT_MINUTES = 1L
     }
 }

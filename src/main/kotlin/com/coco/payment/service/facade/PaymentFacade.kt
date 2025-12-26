@@ -1,14 +1,20 @@
-package com.coco.payment.service
+package com.coco.payment.service.facade
 
+import com.coco.payment.handler.paymentgateway.dto.PgResult
 import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.persistence.model.CustomerPaymentBillingKey
+import com.coco.payment.service.CustomerService
+import com.coco.payment.service.InvoiceService
+import com.coco.payment.service.PaymentAttemptService
 import com.coco.payment.service.dto.BillingView
 import com.coco.payment.service.strategy.PaymentStrategyManager
+import jakarta.transaction.Transactional
 import org.springframework.stereotype.Service
 import java.time.Instant
 
 @Service
-class PaymentService(
+class PaymentFacade(
+    private val invoiceService: InvoiceService,
     private val customerService: CustomerService,
     private val strategyManager: PaymentStrategyManager,
     private val paymentAttemptService: PaymentAttemptService,
@@ -57,6 +63,17 @@ class PaymentService(
     ) {
         val strategy = strategyManager.resolve(confirmResult.paymentSystem)
         strategy.onSuccess(customerSeq, confirmResult)
+    }
+
+    fun findTransaction(externalOrderKey: String, paymentSystem: PaymentSystem): PgResult<BillingView.TransactionResult> {
+        val strategy = strategyManager.resolve(paymentSystem)
+        return strategy.findTransaction(externalOrderKey)
+    }
+
+    @Transactional
+    fun failPayment(invoiceSeq: Long, at: Instant, failedReason: String) {
+        paymentAttemptService.failed(invoiceSeq, at, failedReason)
+        invoiceService.handleRetryOrFinalFailed(invoiceSeq, at)
     }
 
 }

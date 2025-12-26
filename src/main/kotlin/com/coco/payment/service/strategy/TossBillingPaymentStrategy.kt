@@ -1,5 +1,6 @@
 package com.coco.payment.service.strategy
 
+import com.coco.payment.handler.paymentgateway.dto.PgResult
 import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.service.InvoiceService
 import com.coco.payment.service.TossPaymentService
@@ -48,12 +49,11 @@ class TossBillingPaymentStrategy(
             invoice.id!!,
             confirmResult.approvedAt,
         )
-        paymentAttemptService.success(
+        paymentAttemptService.succeeded(
             invoice.id!!,
             confirmResult.approvedAt,
             confirmResult.paymentKey,
         )
-
         val ledger = ledgerService.createLedger(
             customerSeq,
         )
@@ -62,6 +62,10 @@ class TossBillingPaymentStrategy(
             ledger.id!!,
             confirmResult
         )
+    }
+
+    override fun findTransaction(externalOrderKey: String): PgResult<BillingView.TransactionResult.TossTransactionResult> {
+        return tossPaymentService.findTransaction(externalOrderKey)
     }
 }
 

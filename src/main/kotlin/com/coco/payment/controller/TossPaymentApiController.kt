@@ -3,9 +3,8 @@ package com.coco.payment.controller
 import com.coco.payment.controller.dto.TossBillingView
 import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.service.LedgerService
-import com.coco.payment.service.PaymentService
+import com.coco.payment.service.facade.PaymentFacade
 import com.coco.payment.service.TossPaymentService
-import com.coco.payment.service.dto.BillingView
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -13,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 class TossPaymentApiController(
-    private val paymentService: PaymentService,
+    private val paymentFacade: PaymentFacade,
     private val tossPaymentService: TossPaymentService,
     private val ledgerService: LedgerService
 ) {
@@ -26,7 +25,7 @@ class TossPaymentApiController(
             request.customerKey,
             request.authKey
         )
-        paymentService.registerBillingKey(
+        paymentFacade.registerBillingKey(
             request.customerKey,
             billingKeyResult
         )

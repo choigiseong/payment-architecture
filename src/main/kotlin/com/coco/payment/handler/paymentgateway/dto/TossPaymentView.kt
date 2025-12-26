@@ -1,4 +1,4 @@
-package com.coco.payment.handler.dto
+package com.coco.payment.handler.paymentgateway.dto
 
 import java.time.Instant
 
@@ -50,5 +50,21 @@ interface TossPaymentView {
         val approvedAt: Instant,
         val taxFreeAmount: Long
     )
+
+    data class TossTransactionResponse(
+        val paymentKey: String,
+        val type: String,
+        val mId: String,
+        val lastTransactionKey: String,
+        val orderId: String,
+        val totalAmount: Long,
+        val balanceAmount: Long,
+        val status: String,
+        val requestedAt: Instant,
+        val approvedAt: Instant,
+        val taxFreeAmount: Long
+    )
+
+
 
 }

@@ -14,6 +14,11 @@ class InvoiceService(
     private val invoiceRepository: InvoiceRepository,
 ) {
 
+    fun findById(id: Long): Invoice {
+        return invoiceRepository.findById(id)
+            .orElseThrow { IllegalArgumentException("Invoice not found") }
+    }
+
     fun findInvoiceBySubscriptionSeq(subscriptionSeq: Long): List<Invoice> {
         return invoiceRepository.findBySubscriptionSeq(subscriptionSeq)
     }
@@ -59,6 +64,40 @@ class InvoiceService(
             ?: throw IllegalArgumentException("Invoice not found")
     }
 
+
+    @Transactional
+    fun handleRetryOrFinalFailed(id: Long, at: Instant) {
+        updateLastAttemptAt(id, at)
+        val invoice = findById(id)
+        if (invoice.attemptCount >= maxRetry) {
+            failed(id, at)
+        }
+    }
+
+    @Transactional
+    fun updateLastAttemptAt(id: Long, at: Instant) {
+        val affectedRows = invoiceRepository.incrementAttempt(id, at, setOf(InvoiceStatus.PENDING))
+
+        if (affectedRows != 1L) {
+            throw IllegalArgumentException("Invoice not found")
+        }
+    }
+
+
+    @Transactional
+    fun failed(id: Long, at: Instant) {
+        val affectedRows = invoiceRepository.failed(
+            id,
+            at,
+            setOf(InvoiceStatus.PENDING),
+            InvoiceStatus.FAILED
+        )
+
+        if (affectedRows != 1L) {
+            throw IllegalArgumentException("Invoice not found")
+        }
+    }
+
     @Transactional
     fun paid(id: Long, paidAt: Instant) {
         val affectedRows = invoiceRepository.paid(
@@ -71,5 +110,10 @@ class InvoiceService(
         if (affectedRows != 1L) {
             throw IllegalArgumentException("Invoice not found")
         }
+    }
+
+
+    companion object {
+        private val maxRetry = 3
     }
 }

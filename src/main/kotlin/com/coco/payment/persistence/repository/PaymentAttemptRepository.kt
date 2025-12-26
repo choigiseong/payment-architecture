@@ -12,17 +12,42 @@ interface PaymentAttemptRepository : JpaRepository<PaymentAttempt, Long> {
 
 
     @SQL(
+        """
+            SELECT * FROM payment_attempt
+            WHERE requested_at < :at AND status = :pending
+        """
+    )
+    fun findByStatus(at: Instant, pending: PaymentAttemptStatus): List<PaymentAttempt>
+
+    @SQL(
         "UPDATE payment_attempt SET " +
                 "pg_transaction_key = :pgTransactionKey, " +
                 "status = :toStatus, " +
                 "approved_at = :approvedAt " +
                 "WHERE invoice_seq = :invoiceSeq AND status IN (:fromStatus)"
     )
-    fun success(
+    fun succeeded(
         invoiceSeq: Long,
         pgTransactionKey: String,
         fromStatus: Set<PaymentAttemptStatus>,
         toStatus: PaymentAttemptStatus,
         approvedAt: Instant,
     ): Long
+
+
+    @SQL(
+        "UPDATE payment_attempt SET " +
+                "status = :toStatus, " +
+                "failed_reason = :failedReason, " +
+                "failed_at = :failedAt " +
+                "WHERE invoice_seq = :invoiceSeq AND status IN (:fromStatus)"
+    )
+    fun failed(
+        invoiceSeq: Long,
+        fromStatus: Set<PaymentAttemptStatus>,
+        toStatus: PaymentAttemptStatus,
+        failedReason: String,
+        failedAt: Instant
+    ): Long
+
 }
