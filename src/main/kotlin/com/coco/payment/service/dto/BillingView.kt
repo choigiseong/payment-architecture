@@ -13,6 +13,7 @@ interface BillingView {
     )
 
     data class ConfirmBillingCommand(
+        val billingKey: String,
         val customerSeq: Long,
         val paymentSystem: PaymentSystem,
         val amount: Long,
@@ -41,6 +42,42 @@ interface BillingView {
         ) : ConfirmResult
     }
 
+    data class RefundBillingCommand(
+//        val customerSeq: Long,
+        val originalTransactionKey: String,
+        val paymentSystem: PaymentSystem,
+        val amount: Long,
+        val reason: String
+    )
+
+    interface RefundResult {
+        val paymentSystem: PaymentSystem
+
+        data class TossRefundResult(
+            override val paymentSystem: PaymentSystem = PaymentSystem.TOSS,
+            val paymentKey: String,
+            val type: String,
+            val mId: String,
+            val lastTransactionKey: String,
+            val orderId: String,
+            val totalAmount: Long,
+            val balanceAmount: Long,
+            val status: String,
+            val requestedAt: Instant,
+            val approvedAt: Instant,
+            val taxFreeAmount: Long,
+            val cancelList: List<TossRefundResult>,
+            val canceledAt: Instant
+        ) : RefundResult {
+            override fun isRefundable(): Boolean {
+                //todo 수정
+                return cancelList.isEmpty()
+            }
+        }
+
+        fun isRefundable(): Boolean
+    }
+
     interface TransactionResult {
         val paymentSystem: PaymentSystem
 
@@ -58,9 +95,6 @@ interface BillingView {
             val approvedAt: Instant,
             val taxFreeAmount: Long
         ) : TransactionResult {
-            override fun isSuccess(): Boolean {
-                return this.status == "PAID"
-            }
 
             override fun toConfirmResult(): ConfirmResult.TossConfirmResult {
                 return ConfirmResult.TossConfirmResult(
@@ -80,7 +114,6 @@ interface BillingView {
             }
         }
 
-        fun isSuccess(): Boolean
         fun toConfirmResult(): ConfirmResult
     }
 

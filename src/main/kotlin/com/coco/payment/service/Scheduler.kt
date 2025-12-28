@@ -31,13 +31,10 @@ class Scheduler(
 
     private fun processPaymentRecovery(attempt: PaymentAttempt, now: Instant) {
         val invoice = invoiceService.findById(attempt.invoiceSeq)
-        val subscription = subscriptionService.findById(invoice.subscriptionSeq)
-
         val result = paymentFacade.findTransaction(invoice.externalOrderKey, attempt.paymentSystem)
         when (result) {
             is PgResult.Success -> {
                 paymentFacade.successBilling(
-                    subscription.customerSeq,
                     result.value.toConfirmResult()
                 )
             }

@@ -57,4 +57,16 @@ class SubscriptionService(
         }
 
     }
+
+    @Transactional
+    fun cancel(id: Long) {
+        val affectedRows = subscriptionRepository.cancel(
+            id,
+            setOf(SubscriptionStatus.ACTIVE, SubscriptionStatus.PAUSED, SubscriptionStatus.PAST_DUE),
+            SubscriptionStatus.CANCELLED
+        )
+        if (affectedRows != 1L) {
+            throw IllegalArgumentException("Subscription not found")
+        }
+    }
 }

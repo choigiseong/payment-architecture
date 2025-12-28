@@ -50,4 +50,17 @@ interface PaymentAttemptRepository : JpaRepository<PaymentAttempt, Long> {
         failedAt: Instant
     ): Long
 
+    @SQL(
+        """
+            SELECT * FROM payment_attempt
+            WHERE invoice_seq = :invoiceSeq AND status = :status
+            ORDER BY approved_at DESC
+            LIMIT 1
+        """
+    )
+    fun findFirstByInvoiceSeqAndStatusOrderByApprovedAtDesc(
+        invoiceSeq: Long,
+        status: PaymentAttemptStatus
+    ): PaymentAttempt?
+
 }

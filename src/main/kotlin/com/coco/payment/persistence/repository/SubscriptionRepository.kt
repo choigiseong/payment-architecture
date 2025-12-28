@@ -17,4 +17,9 @@ interface SubscriptionRepository : JpaRepository<Subscription, Long> {
         "UPDATE subscription SET next_billing_date = :periodEnd WHERE id = :id"
     )
     fun renewSubscription(id: Long, periodEnd: LocalDate): Long
+
+    @SQL(
+        "UPDATE subscription SET status = :toStatus WHERE id = :id AND status IN (:fromStatus)"
+    )
+    fun cancel(id: Long, fromStatus: Set<SubscriptionStatus>, toStatus: SubscriptionStatus): Long
 }

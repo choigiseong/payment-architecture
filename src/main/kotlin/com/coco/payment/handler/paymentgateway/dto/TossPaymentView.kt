@@ -73,6 +73,34 @@ interface TossPaymentView {
         }
     }
 
+    data class TossCancelRequest(
+        val cancelReason: String,
+        val cancelAmount: Long,
+    )
+
+    data class TossCancelResponse(
+        val paymentKey: String,
+        val type: String,
+        val mId: String,
+        val lastTransactionKey: String,
+        val orderId: String,
+        val totalAmount: Long,
+        val balanceAmount: Long,
+        val status: String,
+        val requestedAt: Instant,
+        val approvedAt: Instant,
+        val taxFreeAmount: Long,
+        val cancels: List<Cancel>
+    )
+
+    data class Cancel(
+        val transactionKey: String,
+        val cancelReason: String,
+        val cancelAmount: Long,
+        val cancelAt: Instant,
+        val cancelStatus: String,
+    )
+
     data class TossErrorResponse(
         val version: String,
         val traceId: String,

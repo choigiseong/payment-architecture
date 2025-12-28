@@ -32,10 +32,24 @@ interface InvoiceRepository : JpaRepository<Invoice, Long> {
 
     @SQL(
         "UPDATE invoice SET " +
+                "status = :toStatus WHERE id = :id AND status IN (:fromStatus)"
+    )
+    fun refunded(id: Long, fromStatus: Set<InvoiceStatus>, toStatus: InvoiceStatus): Long
+
+    @SQL(
+        "UPDATE invoice SET " +
+                "status = :toStatus WHERE id = :id AND status IN (:fromStatus)"
+    )
+    fun partiallyRefunded(id: Long, fromStatus: Set<InvoiceStatus>, toStatus: InvoiceStatus): Long
+
+
+    @SQL(
+        "UPDATE invoice SET " +
                 "attempt_count = attempt_count + 1, " +
                 "last_attempt_at = :at " +
                 "WHERE id = :id AND status IN (:fromStatus)"
     )
     fun incrementAttempt(id: Long, at: Instant, fromStatus: Set<InvoiceStatus>): Long
+
 
 }

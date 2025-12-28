@@ -2,7 +2,8 @@ package com.coco.payment.service.facade
 
 import com.coco.payment.persistence.model.Customer
 import com.coco.payment.service.InvoiceService
-import com.coco.payment.service.facade.PaymentFacade
+import com.coco.payment.service.PaymentAttemptService
+import com.coco.payment.service.RefundAttemptService
 import com.coco.payment.service.SubscriptionService
 import com.coco.payment.service.dto.BillingView
 import org.springframework.stereotype.Service
@@ -14,6 +15,8 @@ class SubscriptionPaymentFacade(
     private val subscriptionService: SubscriptionService,
     private val paymentFacade: PaymentFacade,
     private val invoiceService: InvoiceService,
+    private val refundAttemptService: RefundAttemptService,
+    private val paymentAttemptService: PaymentAttemptService,
 ) {
 
     // 구독 결제. 앞에서 이미 결제할 애들을 고른다
@@ -48,6 +51,7 @@ class SubscriptionPaymentFacade(
             invoice.id!!,
             at,
             BillingView.ConfirmBillingCommand(
+                billingKey.billingKey,
                 customer.id!!,
                 paymentSystem,
                 invoice.amount,
@@ -60,13 +64,52 @@ class SubscriptionPaymentFacade(
 
         try {
             paymentFacade.successBilling(
-                customer.id!!,
                 confirmResult
             )
         } catch (e: Exception) {
             // logging 결제는 성공했지만, 이후 비즈니스 로직 실패. 성공으로 응답.
             // 커버는 콜백과 스케줄러.
         }
+    }
+
+    fun paymentRefund(
+        invoiceSeq: Long,
+        refundAmount: Long,
+        reason: String,
+    ) {
+        val now = Instant.now()
+        val invoice = invoiceService.findById(invoiceSeq)
+        val successPayment = paymentAttemptService.findSuccessByInvoice(invoiceSeq)
+
+        val alreadyRefundedAmount = refundAttemptService.sumSuccessAmountByInvoice(invoiceSeq)
+        val refundableAmount = invoice.refundableAmount(alreadyRefundedAmount)
+
+        if (refundableAmount < refundAmount) {
+            throw IllegalStateException("환불 가능 잔액 부족 (잔액: $refundableAmount)")
+        }
+
+        val refundResult = paymentFacade.refund(
+            invoice.id!!,
+            successPayment.id!!,
+            now,
+            BillingView.RefundBillingCommand(
+                successPayment.pgTransactionKey!!,
+                successPayment.paymentSystem,
+                refundAmount,
+                reason
+            )
+        )
+
+
+        try {
+            paymentFacade.successRefundBilling(
+                refundResult
+            )
+        } catch (e: Exception) {
+            // logging 결제는 성공했지만, 이후 비즈니스 로직 실패. 성공으로 응답.
+            // 커버는 콜백과 스케줄러.
+        }
+
     }
 
 }

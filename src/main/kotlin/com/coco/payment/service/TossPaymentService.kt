@@ -36,11 +36,10 @@ class TossPaymentService(
     }
 
     fun confirmBilling(
-        billingKey: String,
         confirmBillingCommand: BillingView.ConfirmBillingCommand
     ): BillingView.ConfirmResult.TossConfirmResult {
         val response = tossPaymentClient.confirmBilling(
-            billingKey,
+            confirmBillingCommand.billingKey,
             TossPaymentView.TossConfirmBillingRequest(
                 confirmBillingCommand.customerSeq.toString(),
                 confirmBillingCommand.amount,
@@ -52,6 +51,35 @@ class TossPaymentService(
         )
 
         return BillingView.ConfirmResult.TossConfirmResult(
+            PaymentSystem.TOSS,
+            response.paymentKey,
+            response.type,
+            response.mId,
+            response.lastTransactionKey,
+            response.orderId,
+            response.totalAmount,
+            response.balanceAmount,
+            response.status,
+            response.requestedAt,
+            response.approvedAt,
+            response.taxFreeAmount
+        )
+    }
+
+
+    fun cancelBilling(
+        refundBillingCommand: BillingView.RefundBillingCommand
+    ): BillingView.RefundResult.TossRefundResult {
+        val response = tossPaymentClient.cancelBilling(
+            refundBillingCommand.originalTransactionKey,
+            TossPaymentView.TossCancelRequest(
+                refundBillingCommand.reason,
+                refundBillingCommand.amount,
+            )
+        )
+        // cancel response is list
+
+        return BillingView.RefundResult.TossRefundResult(
             PaymentSystem.TOSS,
             response.paymentKey,
             response.type,

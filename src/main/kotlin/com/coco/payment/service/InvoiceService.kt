@@ -112,6 +112,30 @@ class InvoiceService(
         }
     }
 
+    
+    @Transactional
+    fun refunded(id: Long) {
+        val affectedRows = invoiceRepository.refunded(
+            id,
+            setOf(InvoiceStatus.PAID, InvoiceStatus.PARTIALLY_REFUNDED),
+            InvoiceStatus.REFUNDED
+        )
+        if (affectedRows != 1L) {
+            throw IllegalArgumentException("Invoice not found")
+        }
+    }
+
+    @Transactional
+    fun partiallyRefunded(id: Long) {
+        val affectedRows = invoiceRepository.partiallyRefunded(
+            id,
+            setOf(InvoiceStatus.PAID, InvoiceStatus.PARTIALLY_REFUNDED),
+            InvoiceStatus.PARTIALLY_REFUNDED
+        )
+        if (affectedRows != 1L) {
+            throw IllegalArgumentException("Invoice not found")
+        }
+    }
 
     companion object {
         private val maxRetry = 3

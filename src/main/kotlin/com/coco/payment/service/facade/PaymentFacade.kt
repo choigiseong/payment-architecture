@@ -6,6 +6,7 @@ import com.coco.payment.persistence.model.CustomerPaymentBillingKey
 import com.coco.payment.service.CustomerService
 import com.coco.payment.service.InvoiceService
 import com.coco.payment.service.PaymentAttemptService
+import com.coco.payment.service.RefundAttemptService
 import com.coco.payment.service.dto.BillingView
 import com.coco.payment.service.strategy.PaymentStrategyManager
 import jakarta.transaction.Transactional
@@ -18,7 +19,21 @@ class PaymentFacade(
     private val customerService: CustomerService,
     private val strategyManager: PaymentStrategyManager,
     private val paymentAttemptService: PaymentAttemptService,
+    private val refundAttemptService: RefundAttemptService,
 ) {
+
+    fun findBillingKey(customerSeq: Long, paymentSystem: PaymentSystem): CustomerPaymentBillingKey? {
+        val customer = customerService.findById(customerSeq)
+        return customer.billingKeys.find { it.paymentSystem == paymentSystem }
+    }
+
+    fun findTransaction(
+        externalOrderKey: String,
+        paymentSystem: PaymentSystem
+    ): PgResult<BillingView.TransactionResult> {
+        val strategy = strategyManager.resolve(paymentSystem)
+        return strategy.findTransaction(externalOrderKey)
+    }
 
     fun registerBillingKey(
         customerKey: String, billingKeyResult: BillingView.BillingKeyResult
@@ -30,20 +45,11 @@ class PaymentFacade(
         )
     }
 
-    fun findBillingKey(customerSeq: Long, paymentSystem: PaymentSystem): CustomerPaymentBillingKey? {
-        val customer = customerService.findById(customerSeq)
-        return customer.billingKeys.find { it.paymentSystem == paymentSystem }
-    }
-
     fun confirmBilling(
         invoiceSeq: Long,
         requestedAt: Instant,
         confirmBillingCommand: BillingView.ConfirmBillingCommand
     ): BillingView.ConfirmResult {
-        val billingKeyModel =
-            findBillingKey(confirmBillingCommand.customerSeq, confirmBillingCommand.paymentSystem)
-                ?: throw IllegalArgumentException("Billing key not found")
-
         paymentAttemptService.createPaymentAttempt(
             invoiceSeq,
             confirmBillingCommand.paymentSystem,
@@ -52,23 +58,45 @@ class PaymentFacade(
 
         val strategy = strategyManager.resolve(confirmBillingCommand.paymentSystem)
         return strategy.confirmBilling(
-            billingKeyModel.billingKey, confirmBillingCommand
+            confirmBillingCommand
+        )
+    }
+
+    fun refund(
+        invoiceSeq: Long,
+        paymentAttemptSeq: Long,
+        at: Instant,
+        command: BillingView.RefundBillingCommand
+    ): BillingView.RefundResult {
+        refundAttemptService.createAttempt(
+            invoiceSeq = invoiceSeq,
+            paymentAttemptSeq = paymentAttemptSeq,
+            amount = command.amount,
+            reason = command.reason,
+            at = at
+        )
+
+        val strategy = strategyManager.resolve(command.paymentSystem)
+        return strategy.refundBilling(
+            command
         )
     }
 
 
     fun successBilling(
-        customerSeq: Long,
         confirmResult: BillingView.ConfirmResult
     ) {
         val strategy = strategyManager.resolve(confirmResult.paymentSystem)
-        strategy.onSuccess(customerSeq, confirmResult)
+        strategy.onSuccessBilling(confirmResult)
     }
 
-    fun findTransaction(externalOrderKey: String, paymentSystem: PaymentSystem): PgResult<BillingView.TransactionResult> {
-        val strategy = strategyManager.resolve(paymentSystem)
-        return strategy.findTransaction(externalOrderKey)
+    fun successRefundBilling(
+        refundResult: BillingView.RefundResult
+    ) {
+        val strategy = strategyManager.resolve(refundResult.paymentSystem)
+        strategy.onSuccessRefundBilling(refundResult)
     }
+
 
     @Transactional
     fun failPayment(invoiceSeq: Long, at: Instant, failedReason: String) {

@@ -57,6 +57,11 @@ class Invoice(
         return status.isPaid()
     }
 
+    fun refundableAmount(alreadyRefundedAmount: Long): Long {
+        val remaining = amount - alreadyRefundedAmount
+        return remaining.coerceAtLeast(0)
+    }
+
     companion object {
         fun buildExternalOrderKey(
             consumerSeq: Long,

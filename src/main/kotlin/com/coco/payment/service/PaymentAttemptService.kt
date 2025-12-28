@@ -61,6 +61,13 @@ class PaymentAttemptService(
         }
     }
 
+    fun findSuccessByInvoice(invoiceSeq: Long): PaymentAttempt {
+        return paymentAttemptRepository.findFirstByInvoiceSeqAndStatusOrderByApprovedAtDesc(
+            invoiceSeq,
+            PaymentAttemptStatus.SUCCEEDED
+        ) ?: throw IllegalStateException("성공한 결제 이력이 없습니다.")
+    }
+
 
     companion object {
         private const val PENDING_TIMEOUT_MINUTES = 1L

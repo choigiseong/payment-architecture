@@ -20,14 +20,20 @@ interface TossPaymentClient {
         @RequestBody request: TossPaymentView.TossBillingKeyRequest
     ): TossPaymentView.TossBillingKeyResponse
 
-    @PostMapping("\${payment.toss.api.endpoint.confirm-billing}/{billingKey}")
+    @PostMapping("\${payment.toss.api.endpoint.confirm-billing}")
     fun confirmBilling(
         @PathVariable billingKey: String,
         @RequestBody request: TossPaymentView.TossConfirmBillingRequest
     ): TossPaymentView.TossConfirmBillingBillingResponse
 
-    @GetMapping("\${payment.toss.api.endpoint.transaction}/{externalOrderKey}")
+    @GetMapping("\${payment.toss.api.endpoint.transaction}")
     fun findTransaction(
         @PathVariable externalOrderKey: String
     ): TossPaymentView.TossTransactionResponse
+
+    @PostMapping("\${payment.toss.api.endpoint.cancel-billing}")
+    fun cancelBilling(
+        @PathVariable paymentKey: String,
+        @RequestBody request: TossPaymentView.TossCancelRequest
+    ): TossPaymentView.TossCancelResponse
 }
