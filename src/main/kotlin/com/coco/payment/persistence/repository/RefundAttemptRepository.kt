@@ -1,5 +1,6 @@
 package com.coco.payment.persistence.repository
 
+import com.coco.payment.persistence.enumerator.InvoiceStatus
 import com.coco.payment.persistence.enumerator.RefundAttemptStatus
 import com.coco.payment.persistence.model.RefundAttempt
 import org.hibernate.annotations.processing.SQL
@@ -16,7 +17,7 @@ interface RefundAttemptRepository : JpaRepository<RefundAttempt, Long> {
             WHERE invoice_seq = :invoiceSeq AND status = :status
         """
     )
-    fun sumSuccessAmountByInvoice(invoiceSeq: Long): Long
+    fun sumSuccessAmountByInvoice(invoiceSeq: Long, status: RefundAttemptStatus): Long
 
     @SQL(
         "UPDATE refund_attempt SET " +

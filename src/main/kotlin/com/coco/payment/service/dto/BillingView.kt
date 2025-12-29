@@ -66,14 +66,23 @@ interface BillingView {
             val requestedAt: Instant,
             val approvedAt: Instant,
             val taxFreeAmount: Long,
-            val cancelList: List<TossRefundResult>,
-            val canceledAt: Instant
+            val cancelList: List<TossRefundInfo>,
         ) : RefundResult {
             override fun isRefundable(): Boolean {
-                //todo 수정
-                return cancelList.isEmpty()
+                return this.balanceAmount != 0L
+            }
+
+            fun getLastCanceledInfo(): TossRefundInfo {
+                return cancelList.find { it.transactionKey == lastTransactionKey }
+                    ?: throw IllegalArgumentException("TossRefundResult not found lastTransactionKey, transactionKey: $lastTransactionKey")
             }
         }
+
+        data class TossRefundInfo(
+            val amount: Long,
+            val canceledAt: Instant,
+            val transactionKey: String
+        )
 
         fun isRefundable(): Boolean
     }

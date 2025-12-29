@@ -15,13 +15,13 @@ import org.springframework.transaction.annotation.Transactional
 
 @Component
 class TossBillingPaymentStrategy(
-    private val tossPaymentService: TossPaymentService,
-    private val tossPaymentEventService: TossPaymentEventService,
+    private val ledgerService: LedgerService,
     private val invoiceService: InvoiceService,
-    private val paymentAttemptService: PaymentAttemptService,
-    private val refundAttemptService: RefundAttemptService,
+    private val tossPaymentService: TossPaymentService,
     private val subscriptionService: SubscriptionService,
-    private val ledgerService: LedgerService
+    private val refundAttemptService: RefundAttemptService,
+    private val paymentAttemptService: PaymentAttemptService,
+    private val tossPaymentEventService: TossPaymentEventService,
 ) : BillingPaymentStrategy {
     override fun supports(): PaymentSystem = PaymentSystem.TOSS
 
@@ -66,7 +66,8 @@ class TossBillingPaymentStrategy(
         tossPaymentEventService.createTossPaymentEvent(
             subscription.customerSeq,
             ledger.id!!,
-            confirmResult
+            confirmResult.paymentKey,
+            "Approve"
         )
     }
 
@@ -91,14 +92,18 @@ class TossBillingPaymentStrategy(
             invoiceService.partiallyRefunded(invoice.id!!)
         }
 
+        // todo 동시 다중 환불 요청을 방지하기 위해, 환불 처리 중인 경우 다른 환불 요청을 차단해야 합니다.
+        // 이게 최선인가?
+        val lastCanceled = refundResult.getLastCanceledInfo()
         refundAttemptService.succeeded(
             invoice.id!!,
-            refundResult.canceledAt,
-            refundResult.paymentKey /* or lastTransactionKey */
+            lastCanceled.canceledAt,
+            lastCanceled.transactionKey
         )
 
         // 원장/이벤트 기록 (선택, 메서드 추가 필요)
 //         val ledger = ledgerService.createLedger(subscription.customerSeq)
-//         tossPaymentEventService.createTossCancelEvent(subscription.customerSeq, ledger.id!!, cancelResult)
+        // todo ledger는 비동기로?
+        tossPaymentEventService.createTossPaymentEvent(subscription.customerSeq, 1, lastCanceled.transactionKey, "Cancel")
     }
 }

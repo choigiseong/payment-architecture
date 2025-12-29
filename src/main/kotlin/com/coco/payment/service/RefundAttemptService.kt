@@ -32,7 +32,7 @@ class RefundAttemptService(
     }
 
     fun sumSuccessAmountByInvoice(invoiceSeq: Long): Long {
-        return refundAttemptRepository.sumSuccessAmountByInvoice(invoiceSeq)
+        return refundAttemptRepository.sumSuccessAmountByInvoice(invoiceSeq, RefundAttemptStatus.PENDING)
     }
 
     @Transactional

@@ -91,7 +91,14 @@ class TossPaymentService(
             response.status,
             response.requestedAt,
             response.approvedAt,
-            response.taxFreeAmount
+            response.taxFreeAmount,
+            response.cancels.map {
+                BillingView.RefundResult.TossRefundInfo(
+                    it.cancelAmount,
+                    it.cancelAt,
+                    it.transactionKey
+                )
+            }
         )
     }
 
