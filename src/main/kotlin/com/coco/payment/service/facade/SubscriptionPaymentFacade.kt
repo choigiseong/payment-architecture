@@ -81,7 +81,7 @@ class SubscriptionPaymentFacade(
         val invoice = invoiceService.findById(invoiceSeq)
         val successPayment = paymentAttemptService.findSuccessByInvoice(invoiceSeq)
 
-        // todo 이게 맞나? pending 환불이 있는 경우는?
+        // todo 이게 맞나? pending 환불이 있는 경우는? 취소 금액으로 판정?
         val alreadyRefundedAmount = refundAttemptService.sumSuccessAmountByInvoice(invoiceSeq)
         val refundableAmount = invoice.refundableAmount(alreadyRefundedAmount)
 
