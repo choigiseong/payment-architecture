@@ -21,7 +21,7 @@ class SubscriptionService(
     }
 
     fun findTodaySubscription(now: LocalDate): List<Subscription> {
-        val subscriptions = subscriptionRepository.findByNextBillingDate(now, SubscriptionStatus.ACTIVE)
+        val subscriptions = subscriptionRepository.findByNextBillingDateAndStatus(now, SubscriptionStatus.ACTIVE)
         val dueSubscriptions = subscriptionRepository.findByStatus(SubscriptionStatus.PAST_DUE)
         return subscriptions + dueSubscriptions
     }

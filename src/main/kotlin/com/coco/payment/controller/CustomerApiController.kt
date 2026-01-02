@@ -15,7 +15,7 @@ class CustomerApiController(
 
     @GetMapping("/me")
     fun getCustomerKey(): ResponseEntity<CustomerResponse> {
-        val customer = customerService.findCustomerById(1)
+        val customer = customerService.findById(1)
         return ResponseEntity.ok(CustomerResponse(customer))
     }
 }

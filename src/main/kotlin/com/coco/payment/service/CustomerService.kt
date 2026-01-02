@@ -25,7 +25,6 @@ class CustomerService(
         return customerRepository.findById(id).orElseThrow { IllegalArgumentException("Customer not found") }
     }
 
-
     @Transactional
     fun addBillingKey(id: Long, billingKeyResult: BillingView.BillingKeyResult) {
         val customer = findById(id)
@@ -37,4 +36,5 @@ class CustomerService(
         )
         customerRepository.save(customer)
     }
+
 }

@@ -2,8 +2,9 @@ package com.coco.payment.persistence.repository
 
 import com.coco.payment.persistence.enumerator.PaymentAttemptStatus
 import com.coco.payment.persistence.model.PaymentAttempt
-import org.hibernate.annotations.processing.SQL
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Modifying
+import org.springframework.data.jpa.repository.Query
 import org.springframework.stereotype.Repository
 import java.time.Instant
 
@@ -11,20 +12,19 @@ import java.time.Instant
 interface PaymentAttemptRepository : JpaRepository<PaymentAttempt, Long> {
 
 
-    @SQL(
-        """
+    @Query(
+        value = """
             SELECT * FROM payment_attempt
             WHERE requested_at < :at AND status = :pending
-        """
+        """,
+        nativeQuery = true
     )
     fun findByStatus(at: Instant, pending: PaymentAttemptStatus): List<PaymentAttempt>
 
-    @SQL(
-        "UPDATE payment_attempt SET " +
-                "pg_transaction_key = :pgTransactionKey, " +
-                "status = :toStatus, " +
-                "approved_at = :approvedAt " +
-                "WHERE invoice_seq = :invoiceSeq AND status IN (:fromStatus)"
+    @Modifying
+    @Query(
+        value = "UPDATE payment_attempt SET pg_transaction_key = :pgTransactionKey, status = :toStatus, approved_at = :approvedAt WHERE invoice_seq = :invoiceSeq AND status IN (:fromStatus)",
+        nativeQuery = true
     )
     fun succeeded(
         invoiceSeq: Long,
@@ -35,12 +35,10 @@ interface PaymentAttemptRepository : JpaRepository<PaymentAttempt, Long> {
     ): Long
 
 
-    @SQL(
-        "UPDATE payment_attempt SET " +
-                "status = :toStatus, " +
-                "failed_reason = :failedReason, " +
-                "failed_at = :failedAt " +
-                "WHERE invoice_seq = :invoiceSeq AND status IN (:fromStatus)"
+    @Modifying
+    @Query(
+        value = "UPDATE payment_attempt SET status = :toStatus, failed_reason = :failedReason, failed_at = :failedAt WHERE invoice_seq = :invoiceSeq AND status IN (:fromStatus)",
+        nativeQuery = true
     )
     fun failed(
         invoiceSeq: Long,
@@ -50,13 +48,14 @@ interface PaymentAttemptRepository : JpaRepository<PaymentAttempt, Long> {
         failedAt: Instant
     ): Long
 
-    @SQL(
-        """
+    @Query(
+        value = """
             SELECT * FROM payment_attempt
             WHERE invoice_seq = :invoiceSeq AND status = :status
             ORDER BY approved_at DESC
             LIMIT 1
-        """
+        """,
+        nativeQuery = true
     )
     fun findFirstByInvoiceSeqAndStatusOrderByApprovedAtDesc(
         invoiceSeq: Long,

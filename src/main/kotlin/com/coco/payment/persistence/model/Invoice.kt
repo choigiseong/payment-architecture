@@ -37,6 +37,7 @@ class Invoice(
     //간편 결제
 
 
+
     @Column(nullable = false)
     var amount: Long,
     @Enumerated(EnumType.STRING)
