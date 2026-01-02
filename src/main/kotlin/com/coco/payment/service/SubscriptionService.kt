@@ -32,12 +32,13 @@ class SubscriptionService(
     }
 
 
-    fun createSubscription(customerSeq: Long, amount: Long, cycle: BillingCycle, nextBillingDate: LocalDate) {
+    fun createSubscription(customerSeq: Long, billingKey: String, amount: Long, cycle: BillingCycle, nextBillingDate: LocalDate) {
         subscriptionRepository.save(
             Subscription(
                 null,
                 "구독",
                 customerSeq,
+                billingKey,
                 amount,
                 cycle,
                 SubscriptionStatus.PAUSED,

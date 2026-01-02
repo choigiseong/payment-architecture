@@ -24,6 +24,8 @@ class Subscription(
     @Column(nullable = false)
     var customerSeq: Long,
     @Column(nullable = false)
+    var billingKey: String,
+    @Column(nullable = false)
     var amount: Long,
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

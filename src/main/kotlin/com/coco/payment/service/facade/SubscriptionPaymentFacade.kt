@@ -44,7 +44,7 @@ class SubscriptionPaymentFacade(
             return
         }
 
-        val billingKey = customer.findLastBillingKey() ?: throw IllegalArgumentException("Billing key not found")
+        val billingKey = customer.findBillingKey(subscription.billingKey) ?: throw IllegalArgumentException("Billing key not found")
         val paymentSystem = billingKey.paymentSystem
         // todo try catch or retry해야한다. 연체..
 
@@ -55,7 +55,7 @@ class SubscriptionPaymentFacade(
                 billingKey.billingKey,
                 customer.id!!,
                 paymentSystem,
-                invoice.amount,
+                invoice.paidAmount,
                 customer.name,
                 customer.name,
                 invoice.externalOrderKey,
