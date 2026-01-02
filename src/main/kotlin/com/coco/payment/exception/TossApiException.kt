@@ -1,4 +1,4 @@
-package com.coco.payment.handler.paymentgateway
+package com.coco.payment.exception
 
 class TossApiException(
     val status: Int,
