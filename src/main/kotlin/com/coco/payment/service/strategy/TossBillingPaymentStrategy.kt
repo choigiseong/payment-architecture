@@ -46,10 +46,10 @@ class TossBillingPaymentStrategy(
         val invoice = invoiceService.findByExternalKey(
             confirmResult.orderId,
         )
-        val subscription = subscriptionService.findById(invoice.subscriptionSeq)
+        val subscription = subscriptionService.findById(invoice.subscriptionSeq!!)
         subscriptionService.renew(
-            invoice.subscriptionSeq,
-            invoice.periodEnd
+            invoice.subscriptionSeq!!,
+            invoice.periodEnd!!
         )
         invoiceService.paid(
             invoice.id!!,
@@ -83,7 +83,7 @@ class TossBillingPaymentStrategy(
             throw IllegalArgumentException("Provider response is not TossCancelResult")
         }
         val invoice = invoiceService.findByExternalKey(refundResult.orderId)
-        val subscription = subscriptionService.findById(invoice.subscriptionSeq)
+        val subscription = subscriptionService.findById(invoice.subscriptionSeq!!)
 
         if (!refundResult.isRefundable()) {
             subscriptionService.cancel(subscription.id!!)

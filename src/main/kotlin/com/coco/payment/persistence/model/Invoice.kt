@@ -25,12 +25,18 @@ class Invoice(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null,
+
+    // 구독 결제 (추후 분리가 필요)
     @Column(nullable = false)
-    var subscriptionSeq: Long,
+    var subscriptionSeq: Long?,
     @Column(nullable = false)
-    var periodStart: LocalDate,
+    var periodStart: LocalDate?,
     @Column(nullable = false)
-    var periodEnd: LocalDate,
+    var periodEnd: LocalDate?,
+
+    //간편 결제
+
+
     @Column(nullable = false)
     var amount: Long,
     @Enumerated(EnumType.STRING)

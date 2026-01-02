@@ -19,6 +19,7 @@ class SubscriptionPaymentFacade(
     private val paymentAttemptService: PaymentAttemptService,
 ) {
 
+    // todo
     // 구독 결제. 앞에서 이미 결제할 애들을 고른다
     // nextBillingDate이 오늘이고, 상태가 active인 애들
     // 결제 실패는 연체인 애들은 어떻게 결제할 것인가? 상태 관리는?
@@ -45,7 +46,7 @@ class SubscriptionPaymentFacade(
 
         val billingKey = customer.findLastBillingKey() ?: throw IllegalArgumentException("Billing key not found")
         val paymentSystem = billingKey.paymentSystem
-        //try catch or retry해야한다. 연체..
+        // todo try catch or retry해야한다. 연체..
 
         val confirmResult = paymentFacade.confirmBilling(
             invoice.id!!,
