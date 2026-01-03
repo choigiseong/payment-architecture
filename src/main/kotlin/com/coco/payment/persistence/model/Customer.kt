@@ -39,7 +39,7 @@ class Customer(
         return "customer-${this.id}"
     }
 
-    fun findLastBillingKey(): CustomerPaymentBillingKey? {
-        return billingKeys.lastOrNull()
+    fun findLastBillingKey(billingKey: String): CustomerPaymentBillingKey? {
+        return billingKeys.find { it.billingKey == billingKey }
     }
 }

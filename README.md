@@ -3,6 +3,11 @@
 # 구조
 ## dto 패키지 실험 단계
 - 각 레이어별 dto, 각 레이어로 들어가거나 나올 때에 사용, 그 외의 다른 레이어에 침범 X
+- 레이어는 controller, facade, service, persistence 순
+  - 같은 레이어라도 의존이 있을 수 있음. 부모와 자식간. order와 order item과 같음 
+## 클래스 내
+1. 메소드 순서는 crud
+2. 의존성 주입은 글자 길이 순
 
 ## DTO
 - 서비스 DTO

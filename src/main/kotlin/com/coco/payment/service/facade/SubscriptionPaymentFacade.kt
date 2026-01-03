@@ -8,6 +8,7 @@ import com.coco.payment.service.SubscriptionService
 import com.coco.payment.service.dto.BillingView
 import org.springframework.stereotype.Service
 import java.time.Instant
+import java.util.UUID
 
 
 @Service
@@ -26,15 +27,17 @@ class SubscriptionPaymentFacade(
 
     fun paymentSubscribe(
         customer: Customer,
+        uuid: UUID,
         at: Instant
     ) {
         val subscription = subscriptionService.findSubscriptionByCustomerSeq(customer.id!!)
-        val invoice = invoiceService.findOrCreateCurrent(
+        val invoice = invoiceService.findOrCreateCurrentSubscriptionInvoice(
             customer.id!!,
             subscription.id!!,
             subscription.nextBillingDate,
             subscription.cycle,
             subscription.amount,
+            uuid,
             at,
         )
         if (invoice.isPaid()) {
@@ -44,7 +47,7 @@ class SubscriptionPaymentFacade(
             return
         }
 
-        val billingKey = customer.findBillingKey(subscription.billingKey) ?: throw IllegalArgumentException("Billing key not found")
+        val billingKey = customer.findLastBillingKey(subscription.billingKey) ?: throw IllegalArgumentException("Billing key not found")
         val paymentSystem = billingKey.paymentSystem
         // todo try catch or retry해야한다. 연체..
 

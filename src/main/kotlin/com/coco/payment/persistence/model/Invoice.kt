@@ -1,6 +1,8 @@
 package com.coco.payment.persistence.model
 
 import com.coco.payment.persistence.enumerator.InvoiceStatus
+import com.coco.payment.persistence.enumerator.InvoiceType
+import com.coco.payment.persistence.model.Invoice
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -11,6 +13,7 @@ import jakarta.persistence.Id
 import jakarta.persistence.Table
 import java.time.Instant
 import java.time.LocalDate
+import java.util.UUID
 
 // Invoice = 최종 결제 결과
 
@@ -26,20 +29,30 @@ class Invoice(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null,
 
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    var type: InvoiceType,
+
+
     // 구독 결제 (추후 분리가 필요)
-    @Column(nullable = false)
-    var subscriptionSeq: Long?,
-    @Column(nullable = false)
-    var periodStart: LocalDate?,
-    @Column(nullable = false)
-    var periodEnd: LocalDate?,
+    @Column(nullable = true)
+    val subscriptionSeq: Long? = null,
+    @Column(nullable = true)
+    val periodStart: LocalDate? = null,
+    @Column(nullable = true)
+    val periodEnd: LocalDate? = null,
 
     //간편 결제
-
-
+    @Column(nullable = true)
+    val orderSeq: Long? = null,
 
     @Column(nullable = false)
-    var amount: Long,
+    val totalAmount: Long,
+    @Column(nullable = false)
+    val paidAmount: Long,
+    @Column(nullable = false)
+    val discountAmount: Long,
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     var status: InvoiceStatus = InvoiceStatus.PENDING,
@@ -54,7 +67,7 @@ class Invoice(
     @Column(nullable = true)
     var lastAttemptAt: Instant, // todo 마지막 시도 시간 retry 개념 연체 시 사용 예정.
     @Column(nullable = false, unique = true)
-    var externalOrderKey: String,
+    val externalOrderKey: String,
     @Column(nullable = false)
     var createdAt: Instant = Instant.now(),
     @Column(nullable = false)
@@ -65,18 +78,59 @@ class Invoice(
     }
 
     fun refundableAmount(alreadyRefundedAmount: Long): Long {
-        val remaining = amount - alreadyRefundedAmount
+        val remaining = paidAmount - alreadyRefundedAmount
         return remaining.coerceAtLeast(0)
     }
 
     companion object {
         fun buildExternalOrderKey(
-            consumerSeq: Long,
-            subscriptionSeq: Long,
-            periodStart: LocalDate,
-            periodEnd: LocalDate
+            customerSeq: Long,
+            type: InvoiceType,
+            refSeq: Long,
+            uuid: UUID
         ): String {
-            return "invoice-${consumerSeq}-${subscriptionSeq}-${periodStart}-${periodEnd}"
+            return "invoice-${customerSeq}-${type}-${refSeq}-${uuid}"
+        }
+
+        fun ofPrepayment(
+            orderSeq: Long,
+            totalAmount: Long,
+            paidAmount: Long,
+            totalDiscount: Long,
+            externalOrderKey: String,
+            at: Instant
+        ): Invoice {
+            return Invoice(
+                type = InvoiceType.PREPAYMENT,
+                orderSeq = orderSeq,
+                totalAmount = totalAmount,
+                paidAmount = paidAmount,
+                discountAmount = totalDiscount,
+                externalOrderKey = externalOrderKey,
+                lastAttemptAt = at,
+            )
+        }
+
+        fun ofSubscription(
+            subscriptionSeq: Long,
+            totalAmount: Long,
+            periodStart: LocalDate,
+            periodEnd: LocalDate,
+            externalOrderKey: String,
+            at: Instant
+        ): Invoice {
+            return Invoice(
+                type = InvoiceType.SUBSCRIPTION,
+                subscriptionSeq = subscriptionSeq,
+                orderSeq = null,
+                totalAmount = totalAmount,
+                paidAmount = totalAmount,
+                discountAmount = 0,
+                periodStart = periodStart,
+                periodEnd = periodEnd,
+                externalOrderKey = externalOrderKey,
+                lastAttemptAt = at,
+            )
         }
     }
 }

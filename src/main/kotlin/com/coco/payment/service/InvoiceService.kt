@@ -2,34 +2,53 @@ package com.coco.payment.service
 
 import com.coco.payment.persistence.enumerator.BillingCycle
 import com.coco.payment.persistence.enumerator.InvoiceStatus
+import com.coco.payment.persistence.enumerator.InvoiceType
 import com.coco.payment.persistence.model.Invoice
 import com.coco.payment.persistence.repository.InvoiceRepository
+import com.coco.payment.service.dto.PrepaymentView
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.time.LocalDate
+import java.util.UUID
 
 @Service
 class InvoiceService(
     private val invoiceRepository: InvoiceRepository,
 ) {
 
-    fun findById(id: Long): Invoice {
-        return invoiceRepository.findById(id)
-            .orElseThrow { IllegalArgumentException("Invoice not found") }
-    }
-
-    fun findInvoiceBySubscriptionSeq(subscriptionSeq: Long): List<Invoice> {
-        return invoiceRepository.findBySubscriptionSeq(subscriptionSeq)
+    fun createPrepaymentInvoice(
+        customerSeq: Long,
+        orderSeq: Long,
+        paymentSummary: PrepaymentView.PaymentSummary,
+        uuid: UUID,
+        at: Instant,
+    ): Invoice {
+        val externalOrderKey = Invoice.buildExternalOrderKey(
+            customerSeq,
+            InvoiceType.PREPAYMENT,
+            orderSeq,
+            uuid
+        )
+        val invoice = Invoice.ofPrepayment(
+            orderSeq = orderSeq,
+            totalAmount = paymentSummary.totalAmount,
+            paidAmount = paymentSummary.paidAmount,
+            totalDiscount = paymentSummary.totalDiscount,
+            externalOrderKey = externalOrderKey,
+            at = at,
+        )
+        return invoiceRepository.save(invoice)
     }
 
     // 연체가 되어, 다음날 결제되어도 이전 결제일을 기반으로 구독 된다. 예 chatgpt
-    fun findOrCreateCurrent(
-        consumerSeq: Long,
+    fun findOrCreateCurrentSubscriptionInvoice(
+        customerSeq: Long,
         subscriptionSeq: Long,
         nextBillingDate: LocalDate,
         cycle: BillingCycle,
         amount: Long,
+        uuid: UUID,
         at: Instant,
     ): Invoice {
         val periodStart = nextBillingDate
@@ -42,19 +61,30 @@ class InvoiceService(
             ?.let { return it }
 
         val externalOrderKey = Invoice.buildExternalOrderKey(
-            consumerSeq,
+            customerSeq,
+            InvoiceType.SUBSCRIPTION,
             subscriptionSeq,
-            periodStart,
-            periodEnd
+            uuid,
         )
-        return Invoice(
+        val invoice = Invoice.ofSubscription(
             subscriptionSeq = subscriptionSeq,
-            amount = amount,
+            totalAmount = amount,
             periodStart = periodStart,
             periodEnd = periodEnd,
             externalOrderKey = externalOrderKey,
-            lastAttemptAt = at,
+            at = at,
         )
+
+        return invoiceRepository.save(invoice)
+    }
+
+    fun findById(id: Long): Invoice {
+        return invoiceRepository.findById(id)
+            .orElseThrow { IllegalArgumentException("Invoice not found") }
+    }
+
+    fun findInvoiceBySubscriptionSeq(subscriptionSeq: Long): List<Invoice> {
+        return invoiceRepository.findBySubscriptionSeq(subscriptionSeq)
     }
 
     fun findByExternalKey(
@@ -112,7 +142,7 @@ class InvoiceService(
         }
     }
 
-    
+
     @Transactional
     fun refunded(id: Long) {
         val affectedRows = invoiceRepository.refunded(
