@@ -23,7 +23,7 @@ class TossBillingPaymentStrategy(
     private val paymentAttemptService: PaymentAttemptService,
     private val tossPaymentEventService: TossPaymentEventService,
 ) : BillingPaymentStrategy {
-    override fun supports(): PaymentSystem = PaymentSystem.TOSS
+    override fun supports(paymentSystem: PaymentSystem): Boolean = paymentSystem == PaymentSystem.TOSS
 
 
     override fun findTransaction(externalOrderKey: String): PgResult<BillingView.TransactionResult.TossTransactionResult> {
@@ -43,7 +43,7 @@ class TossBillingPaymentStrategy(
         if (confirmResult !is BillingView.ConfirmResult.TossConfirmResult) {
             throw IllegalArgumentException("Provider response is not TossPaymentConfirmResponse")
         }
-        val invoice = invoiceService.findByExternalKey(
+        val invoice = invoiceService.findByExternalOrderKey(
             confirmResult.orderId,
         )
         val subscription = subscriptionService.findById(invoice.subscriptionSeq!!)
@@ -82,7 +82,7 @@ class TossBillingPaymentStrategy(
         if (refundResult !is BillingView.RefundResult.TossRefundResult) {
             throw IllegalArgumentException("Provider response is not TossCancelResult")
         }
-        val invoice = invoiceService.findByExternalKey(refundResult.orderId)
+        val invoice = invoiceService.findByExternalOrderKey(refundResult.orderId)
         val subscription = subscriptionService.findById(invoice.subscriptionSeq!!)
 
         if (!refundResult.isRefundable()) {
@@ -104,6 +104,11 @@ class TossBillingPaymentStrategy(
         // 원장/이벤트 기록 (선택, 메서드 추가 필요)
 //         val ledger = ledgerService.createLedger(subscription.customerSeq)
         // todo ledger는 비동기로?
-        tossPaymentEventService.createTossPaymentEvent(subscription.customerSeq, 1, lastCanceled.transactionKey, "Cancel")
+        tossPaymentEventService.createTossPaymentEvent(
+            subscription.customerSeq,
+            1,
+            lastCanceled.transactionKey,
+            "Cancel"
+        )
     }
 }

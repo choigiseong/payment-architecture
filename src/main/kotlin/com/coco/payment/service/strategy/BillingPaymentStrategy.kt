@@ -5,7 +5,7 @@ import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.service.dto.BillingView
 
 interface BillingPaymentStrategy {
-    fun supports(): PaymentSystem
+    fun supports(paymentSystem: PaymentSystem): Boolean
     fun confirmBilling(command: BillingView.ConfirmBillingCommand): BillingView.ConfirmResult
     fun onSuccessBilling(confirmResult: BillingView.ConfirmResult)
     fun findTransaction(externalOrderKey: String): PgResult<BillingView.TransactionResult>

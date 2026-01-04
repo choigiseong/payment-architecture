@@ -2,12 +2,12 @@ package com.coco.payment.service.dto
 
 interface PrepaymentView {
 
-    data class CouponDiscountView(
+    data class CouponDiscountCommand(
         val couponSeq: Long,
         val orderItemSeq: Long,
     )
 
-    data class PointDiscountView(
+    data class PointDiscountCommand(
         val amount: Long,
     ) {
         fun isUsePoint(): Boolean {
@@ -36,6 +36,7 @@ interface PrepaymentView {
         fun getTotalAmount(): Long {
             return coupons.sumOf { it.amount }
         }
+
         fun isUseCoupon(): Boolean {
             return coupons.isNotEmpty()
         }
@@ -63,4 +64,17 @@ interface PrepaymentView {
             }
         }
     }
+
+    data class ConfirmPrepaymentCommand(
+
+    )
+
+    interface ConfirmResult {
+
+        data class TossConfirmResult(
+
+        ): ConfirmResult
+    }
+
+
 }

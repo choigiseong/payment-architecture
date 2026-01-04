@@ -5,7 +5,7 @@ import org.springframework.stereotype.Service
 
 @Service
 class CouponService {
-    fun holdCoupon(couponList: List<PrepaymentView.CouponDiscountView>): List<PrepaymentView.CouponHoldResult> {
+    fun holdCoupon(couponList: List<PrepaymentView.CouponDiscountCommand>): List<PrepaymentView.CouponHoldResult> {
         TODO("Not yet implemented")
     }
 }

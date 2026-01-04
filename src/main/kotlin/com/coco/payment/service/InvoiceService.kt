@@ -87,7 +87,7 @@ class InvoiceService(
         return invoiceRepository.findBySubscriptionSeq(subscriptionSeq)
     }
 
-    fun findByExternalKey(
+    fun findByExternalOrderKey(
         externalOrderKey: String
     ): Invoice {
         return invoiceRepository.findByExternalOrderKey(externalOrderKey)

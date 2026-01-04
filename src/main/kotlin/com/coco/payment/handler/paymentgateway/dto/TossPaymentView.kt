@@ -112,4 +112,24 @@ interface TossPaymentView {
         val message: String
     )
 
+    data class TossConfirmPrepaymentRequest(
+        val paymentKey: String,
+        val orderId: String,
+        val amount: Long,
+    )
+
+    data class TossConfirmPrepaymentResponse(
+        val paymentKey: String,
+        val type: String,
+        val mId: String,
+        val lastTransactionKey: String,
+        val orderId: String,
+        val totalAmount: Long,
+        val balanceAmount: Long,
+        val status: String,
+        val requestedAt: Instant,
+        val approvedAt: Instant,
+        val taxFreeAmount: Long,
+    )
+
 }

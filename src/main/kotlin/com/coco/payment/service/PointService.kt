@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service
 @Service
 class PointService {
 
-    fun holdPoint(pointDiscountView: PrepaymentView.PointDiscountView): PrepaymentView.PointHoldResult {
+    fun holdPoint(pointDiscountCommand: PrepaymentView.PointDiscountCommand): PrepaymentView.PointHoldResult {
         TODO("Not yet implemented")
     }
 }

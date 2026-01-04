@@ -8,6 +8,7 @@ import com.coco.payment.handler.paymentgateway.dto.PgResult
 import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.handler.paymentgateway.dto.TossPaymentView
 import com.coco.payment.service.dto.BillingView
+import com.coco.payment.service.dto.PrepaymentView
 import org.springframework.stereotype.Service
 
 @Service
@@ -142,5 +143,28 @@ class TossPaymentService(
                 e.code
             )
         }
+    }
+
+    fun confirmPrepayment(command: PrepaymentView.ConfirmPrepaymentCommand): PrepaymentView.ConfirmResult {
+
+        val response = tossPaymentClient.confirmPrepayment(
+            TossPaymentView.TossConfirmBillingRequest(
+            )
+        )
+
+        return PrepaymentView.ConfirmResult.TossConfirmResult(
+            PaymentSystem.TOSS,
+            response.paymentKey,
+            response.type,
+            response.mId,
+            response.lastTransactionKey,
+            response.orderId,
+            response.totalAmount,
+            response.balanceAmount,
+            response.status,
+            response.requestedAt,
+            response.approvedAt,
+            response.taxFreeAmount
+        )
     }
 }

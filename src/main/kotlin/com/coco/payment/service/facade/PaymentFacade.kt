@@ -31,7 +31,7 @@ class PaymentFacade(
         externalOrderKey: String,
         paymentSystem: PaymentSystem
     ): PgResult<BillingView.TransactionResult> {
-        val strategy = strategyManager.resolve(paymentSystem)
+        val strategy = strategyManager.billingPaymentResolve(paymentSystem)
         return strategy.findTransaction(externalOrderKey)
     }
 
@@ -56,7 +56,7 @@ class PaymentFacade(
             requestedAt
         )
 
-        val strategy = strategyManager.resolve(confirmBillingCommand.paymentSystem)
+        val strategy = strategyManager.billingPaymentResolve(confirmBillingCommand.paymentSystem)
         return strategy.confirmBilling(
             confirmBillingCommand
         )
@@ -76,7 +76,7 @@ class PaymentFacade(
             at = at
         )
 
-        val strategy = strategyManager.resolve(command.paymentSystem)
+        val strategy = strategyManager.billingPaymentResolve(command.paymentSystem)
         return strategy.refundBilling(
             command
         )
@@ -86,14 +86,14 @@ class PaymentFacade(
     fun successBilling(
         confirmResult: BillingView.ConfirmResult
     ) {
-        val strategy = strategyManager.resolve(confirmResult.paymentSystem)
+        val strategy = strategyManager.billingPaymentResolve(confirmResult.paymentSystem)
         strategy.onSuccessBilling(confirmResult)
     }
 
     fun successRefundBilling(
         refundResult: BillingView.RefundResult
     ) {
-        val strategy = strategyManager.resolve(refundResult.paymentSystem)
+        val strategy = strategyManager.billingPaymentResolve(refundResult.paymentSystem)
         strategy.onSuccessRefundBilling(refundResult)
     }
 
@@ -102,6 +102,28 @@ class PaymentFacade(
     fun failPayment(invoiceSeq: Long, at: Instant, failedReason: String) {
         paymentAttemptService.failed(invoiceSeq, at, failedReason)
         invoiceService.handleRetryOrFinalFailed(invoiceSeq, at)
+    }
+
+    fun confirmPrepayment(
+        invoiceSeq: Long,
+        externalOrderKey: String,
+        paymentSystem: PaymentSystem,
+        amount: Long,
+        at: Instant
+    ) {
+        paymentAttemptService.createPaymentAttempt(
+            invoiceSeq,
+            paymentSystem,
+            at
+        )
+
+        val strategy = strategyManager.prepaymentPaymentResolve(paymentSystem)
+        return strategy.confirmPrepayment()
+    }
+
+    fun successPrepayment(paymentSystem: PaymentSystem) {
+        val strategy = strategyManager.prepaymentPaymentResolve(paymentSystem)
+        strategy.onSuccessPrepayment(confirmResult)
     }
 
 }

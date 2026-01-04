@@ -1,7 +1,7 @@
 package com.coco.payment.service.facade
 
 import com.coco.payment.persistence.enumerator.DiscountType
-import com.coco.payment.persistence.enumerator.InvoiceStatus
+import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.persistence.model.Customer
 import com.coco.payment.persistence.model.Invoice
 import com.coco.payment.service.CouponService
@@ -20,6 +20,7 @@ class PrepaymentFacade(
     private val pointService: PointService,
     private val invoiceService: InvoiceService,
     private val invoiceDiscountService: InvoiceDiscountService,
+    private val paymentFacade: PaymentFacade
 ) {
 
     // 인증 단계 메소드 작성
@@ -33,8 +34,8 @@ class PrepaymentFacade(
         customer: Customer,
         orderSeq: Long,
         totalAmount: Long,
-        couponList: List<PrepaymentView.CouponDiscountView>,
-        pointDiscount: PrepaymentView.PointDiscountView,
+        couponList: List<PrepaymentView.CouponDiscountCommand>,
+        pointDiscount: PrepaymentView.PointDiscountCommand,
         uuid: UUID,
         at: Instant
     ): Invoice {
@@ -84,31 +85,42 @@ class PrepaymentFacade(
     // 그리고 상태 변경 쭉
     // 실패 시 hold했던 것들 풀어주고
 
-//    fun approvePrepayment(invoiceId: Long, approvedAt: Instant) {
-//        val invoice = invoiceRepository.findById(invoiceId)
-//            .orElseThrow { IllegalArgumentException("Invoice not found") }
-//        val discounts = invoiceDiscountRepository.findByInvoiceSeq(invoiceId)
-//
-//        val discountSum = discounts.sumOf { it.amount }
-//        require(discountSum == invoice.discountAmount) { "discount aggregate mismatch" }
-//        require(invoice.totalAmount - discountSum == invoice.paidAmount) { "paidAmount mismatch" }
-//
-//        // TODO: (선택) PG 승인 API 호출 및 결과 검증 로직 삽입
-//        // ex) paymentService.capture(...)
-//
-//        // 아랜 전략에서 저장처리
-//
-//        // 인보이스 승인(PAID) 처리
-//        val affected = invoiceRepository.paid(
-//            invoice.id!!,
-//            approvedAt,
-//            setOf(InvoiceStatus.PENDING),
-//            InvoiceStatus.PAID
-//        )
-//        if (affected != 1L) {
-//            throw IllegalStateException("Failed to approve invoice")
-//        }
-//
-//        // TODO: (선택) 원장/이벤트 기록, 후속 비즈니스 처리 등
-//    }
+    fun confirmPrepayment(
+        externalOrderKey: String,
+        paymentKey: String,
+        paymentSystem: PaymentSystem,
+        amount: Long,
+        at: Instant
+    ) {
+        // 1. 상태 검증 (이미 결제되었거나 취소된 건인지)
+        val invoice = invoiceService.findByExternalOrderKey(externalOrderKey)
+        if (invoice.isPaid()) return
+
+        // 금액 대조 (보안상 필수)
+        require(invoice.paidAmount == amount) { "결제 금액이 일치하지 않습니다." }
+        // 쿠폰 사용 가능? hold임?
+
+        // 2. [API 단계] PG 승인 요청
+        // Subscription과 마찬가지로 confirmBilling과 유사한 PG 승인 메서드 호출
+        val confirmResult = paymentFacade.confirmPrepayment(
+            invoice.id!!,
+            invoice.externalOrderKey,
+            paymentSystem,
+            invoice.paidAmount,
+            at
+        )
+
+        // 3. [성공 후 비즈니스 로직 단계]
+        // 여기서부터는 DB 트랜잭션 영역이며, 실패 시 스케줄러/콜백이 보정함
+        try {
+            paymentFacade.successPrepayment(confirmResult)
+        } catch (e: Exception) {
+            // 결제는 성공했지만 내부 로직(주문완료 처리 등) 실패 시 로그 남김
+            // 보정은 배치/스케줄러가 invoice.status == PENDING && PG승인여부=YES인 건을 찾아 처리
+//            log.error("Payment successful but business logic failed for invoice: ${invoice.id}", e)
+        }
+    }
+
+    // 환불 시 배송비는 제외해야함
+    // 부분환불 시 쿠폰은 item단위로
 }

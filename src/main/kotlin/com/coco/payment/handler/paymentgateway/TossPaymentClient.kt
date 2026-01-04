@@ -15,6 +15,11 @@ import org.springframework.web.bind.annotation.RequestBody
 )
 interface TossPaymentClient {
 
+    @GetMapping("\${payment.toss.api.endpoint.transaction}")
+    fun findTransaction(
+        @PathVariable externalOrderKey: String
+    ): TossPaymentView.TossTransactionResponse
+
     @PostMapping("\${payment.toss.api.endpoint.billing-key-issue}")
     fun issueBillingKey(
         @RequestBody request: TossPaymentView.TossBillingKeyRequest
@@ -26,14 +31,14 @@ interface TossPaymentClient {
         @RequestBody request: TossPaymentView.TossConfirmBillingRequest
     ): TossPaymentView.TossConfirmBillingBillingResponse
 
-    @GetMapping("\${payment.toss.api.endpoint.transaction}")
-    fun findTransaction(
-        @PathVariable externalOrderKey: String
-    ): TossPaymentView.TossTransactionResponse
-
     @PostMapping("\${payment.toss.api.endpoint.cancel-billing}")
     fun cancelBilling(
         @PathVariable paymentKey: String,
         @RequestBody request: TossPaymentView.TossCancelRequest
     ): TossPaymentView.TossCancelResponse
+
+    @PostMapping("\${payment.toss.api.endpoint.confirm-prepayment}")
+    fun confirmPrepayment(
+        @RequestBody request: TossPaymentView.TossConfirmPrepaymentRequest
+    ): TossPaymentView.TossConfirmPrepaymentResponse
 }
