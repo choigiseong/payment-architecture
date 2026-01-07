@@ -37,4 +37,5 @@ class InvoiceDiscount(
 
     @Column(nullable = false)
     val createdAt: Instant = Instant.now()
-)
+) {
+}

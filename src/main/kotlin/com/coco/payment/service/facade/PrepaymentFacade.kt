@@ -72,9 +72,6 @@ class PrepaymentFacade(
     }
 
 
-    // 승인 단계 메소드 작성
-    // 실패 시 hold했던 것들 풀어주고
-
     fun confirmPrepayment(
         externalOrderKey: String, pgTransactionKey: String, paymentSystem: PaymentSystem, amount: Long, at: Instant
     ) {
@@ -84,8 +81,9 @@ class PrepaymentFacade(
 
         // 금액 대조 (보안상 필수)
         require(invoice.paidAmount == amount) { "결제 금액이 일치하지 않습니다." }
-        // 쿠폰 사용 가능? hold임?
+        invoiceDiscountService.checkDiscountIsHold(invoice.id!!)
 
+        // todo 실패 시 hold했던 것들 풀어주고
         val confirmResult = paymentFacade.confirmPrepayment(
             invoice.id!!, PrepaymentView.ConfirmPrepaymentCommand(
                 paymentSystem,
@@ -95,10 +93,10 @@ class PrepaymentFacade(
             ), at
         )
 
-        // 여기서부터는 DB 트랜잭션 영역이며, 실패 시 스케줄러/콜백이 보정함
         try {
             paymentFacade.successPrepayment(confirmResult)
         } catch (e: Exception) {
+            // 실패 시 스케줄러/콜백이 보정함
 //            log.error("Payment successful but business logic failed for invoice: ${invoice.id}", e)
         }
     }

@@ -8,4 +8,8 @@ class CouponService {
     fun holdCoupon(couponList: List<PrepaymentView.CouponDiscountCommand>): List<PrepaymentView.CouponHoldResult> {
         TODO("Not yet implemented")
     }
+
+    fun isCouponHoldValid(refSeq: Long?): Boolean {
+        TODO("Not yet implemented")
+    }
 }

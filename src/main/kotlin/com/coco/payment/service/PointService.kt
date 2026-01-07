@@ -9,4 +9,8 @@ class PointService {
     fun holdPoint(pointDiscountCommand: PrepaymentView.PointDiscountCommand): PrepaymentView.PointHoldResult {
         TODO("Not yet implemented")
     }
+
+    fun isPointHoldValid(refSeq: Long?): Boolean {
+        TODO("Not yet implemented")
+    }
 }
