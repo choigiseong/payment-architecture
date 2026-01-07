@@ -18,10 +18,16 @@ interface InvoiceRepository : JpaRepository<Invoice, Long> {
 
     @Modifying
     @Query(
-        value = "UPDATE invoice SET paid_at = :paidAt, status = :toStatus WHERE id = :id AND status IN (:fromStatus)",
+        value = "UPDATE invoice SET pg_transaction_key = :pgTransactionKey,  paid_at = :paidAt, status = :toStatus WHERE id = :id AND status IN (:fromStatus)",
         nativeQuery = true
     )
-    fun paid(id: Long, paidAt: Instant, fromStatus: Set<InvoiceStatus>, toStatus: InvoiceStatus): Long
+    fun paid(
+        id: Long,
+        paidAt: Instant,
+        pgTransactionKey: String,
+        fromStatus: Set<InvoiceStatus>,
+        toStatus: InvoiceStatus
+    ): Long
 
     @Modifying
     @Query(

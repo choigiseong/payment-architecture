@@ -2,6 +2,7 @@ package com.coco.payment.persistence.model
 
 import com.coco.payment.persistence.enumerator.InvoiceStatus
 import com.coco.payment.persistence.enumerator.InvoiceType
+import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.persistence.model.Invoice
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -46,13 +47,17 @@ class Invoice(
     @Column(nullable = true)
     val orderSeq: Long? = null,
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    var paymentSystem: PaymentSystem,
+    @Column(nullable = false)
+    var pgTransactionKey: String? = null,
     @Column(nullable = false)
     val totalAmount: Long,
     @Column(nullable = false)
     val paidAmount: Long,
     @Column(nullable = false)
     val discountAmount: Long,
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     var status: InvoiceStatus = InvoiceStatus.PENDING,
@@ -97,6 +102,7 @@ class Invoice(
             totalAmount: Long,
             paidAmount: Long,
             totalDiscount: Long,
+            paymentSystem: PaymentSystem,
             externalOrderKey: String,
             at: Instant
         ): Invoice {
@@ -106,6 +112,7 @@ class Invoice(
                 totalAmount = totalAmount,
                 paidAmount = paidAmount,
                 discountAmount = totalDiscount,
+                paymentSystem = paymentSystem,
                 externalOrderKey = externalOrderKey,
                 lastAttemptAt = at,
             )
@@ -116,6 +123,7 @@ class Invoice(
             totalAmount: Long,
             periodStart: LocalDate,
             periodEnd: LocalDate,
+            paymentSystem: PaymentSystem,
             externalOrderKey: String,
             at: Instant
         ): Invoice {
@@ -128,6 +136,7 @@ class Invoice(
                 discountAmount = 0,
                 periodStart = periodStart,
                 periodEnd = periodEnd,
+                paymentSystem = paymentSystem,
                 externalOrderKey = externalOrderKey,
                 lastAttemptAt = at,
             )

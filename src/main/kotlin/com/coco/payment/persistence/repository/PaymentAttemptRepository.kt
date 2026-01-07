@@ -23,12 +23,11 @@ interface PaymentAttemptRepository : JpaRepository<PaymentAttempt, Long> {
 
     @Modifying
     @Query(
-        value = "UPDATE payment_attempt SET pg_transaction_key = :pgTransactionKey, status = :toStatus, approved_at = :approvedAt WHERE invoice_seq = :invoiceSeq AND status IN (:fromStatus)",
+        value = "UPDATE payment_attempt SET status = :toStatus, approved_at = :approvedAt WHERE invoice_seq = :invoiceSeq AND status IN (:fromStatus)",
         nativeQuery = true
     )
     fun succeeded(
         invoiceSeq: Long,
-        pgTransactionKey: String,
         fromStatus: Set<PaymentAttemptStatus>,
         toStatus: PaymentAttemptStatus,
         approvedAt: Instant,

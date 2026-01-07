@@ -3,6 +3,7 @@ package com.coco.payment.service
 import com.coco.payment.persistence.enumerator.BillingCycle
 import com.coco.payment.persistence.enumerator.InvoiceStatus
 import com.coco.payment.persistence.enumerator.InvoiceType
+import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.persistence.model.Invoice
 import com.coco.payment.persistence.repository.InvoiceRepository
 import com.coco.payment.service.dto.PrepaymentView
@@ -18,6 +19,7 @@ class InvoiceService(
 ) {
 
     fun createPrepaymentInvoice(
+        paymentSystem: PaymentSystem,
         customerSeq: Long,
         orderSeq: Long,
         paymentSummary: PrepaymentView.PaymentSummary,
@@ -35,6 +37,7 @@ class InvoiceService(
             totalAmount = paymentSummary.totalAmount,
             paidAmount = paymentSummary.paidAmount,
             totalDiscount = paymentSummary.totalDiscount,
+            paymentSystem = paymentSystem,
             externalOrderKey = externalOrderKey,
             at = at,
         )
@@ -43,6 +46,7 @@ class InvoiceService(
 
     // 연체가 되어, 다음날 결제되어도 이전 결제일을 기반으로 구독 된다. 예 chatgpt
     fun findOrCreateCurrentSubscriptionInvoice(
+        paymentSystem: PaymentSystem,
         customerSeq: Long,
         subscriptionSeq: Long,
         nextBillingDate: LocalDate,
@@ -71,6 +75,7 @@ class InvoiceService(
             totalAmount = amount,
             periodStart = periodStart,
             periodEnd = periodEnd,
+            paymentSystem = paymentSystem,
             externalOrderKey = externalOrderKey,
             at = at,
         )
@@ -129,10 +134,11 @@ class InvoiceService(
     }
 
     @Transactional
-    fun paid(id: Long, paidAt: Instant) {
+    fun paid(id: Long, paidAt: Instant, pgTransactionKey: String) {
         val affectedRows = invoiceRepository.paid(
             id,
             paidAt,
+            pgTransactionKey,
             setOf(InvoiceStatus.PENDING),
             InvoiceStatus.PAID
         )

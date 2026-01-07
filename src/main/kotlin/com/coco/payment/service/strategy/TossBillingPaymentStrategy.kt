@@ -54,11 +54,11 @@ class TossBillingPaymentStrategy(
         invoiceService.paid(
             invoice.id!!,
             confirmResult.approvedAt,
+            confirmResult.paymentKey,
         )
         paymentAttemptService.succeeded(
             invoice.id!!,
             confirmResult.approvedAt,
-            confirmResult.paymentKey,
         )
         val ledger = ledgerService.createLedger(
             subscription.customerSeq,

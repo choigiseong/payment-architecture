@@ -29,8 +29,8 @@ class PaymentFacade(
     }
 
     fun findTransaction(
+        paymentSystem: PaymentSystem,
         externalOrderKey: String,
-        paymentSystem: PaymentSystem
     ): PgResult<BillingView.TransactionResult> {
         val strategy = strategyManager.billingPaymentResolve(paymentSystem)
         return strategy.findTransaction(externalOrderKey)
@@ -53,7 +53,6 @@ class PaymentFacade(
     ): BillingView.ConfirmResult {
         paymentAttemptService.createPaymentAttempt(
             invoiceSeq,
-            confirmBillingCommand.paymentSystem,
             requestedAt
         )
 
@@ -65,13 +64,11 @@ class PaymentFacade(
 
     fun refund(
         invoiceSeq: Long,
-        paymentAttemptSeq: Long,
         at: Instant,
         command: BillingView.RefundBillingCommand
     ): BillingView.RefundResult {
         refundAttemptService.createAttempt(
             invoiceSeq = invoiceSeq,
-            paymentAttemptSeq = paymentAttemptSeq,
             amount = command.amount,
             reason = command.reason,
             at = at
@@ -112,7 +109,6 @@ class PaymentFacade(
     ): PrepaymentView.ConfirmResult {
         paymentAttemptService.createPaymentAttempt(
             invoiceSeq,
-            command.paymentSystem,
             at
         )
 

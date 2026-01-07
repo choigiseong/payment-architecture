@@ -16,13 +16,11 @@ class PaymentAttemptService(
 
     fun createPaymentAttempt(
         invoiceSeq: Long,
-        paymentSystem: PaymentSystem,
         requestedAt: Instant,
     ) {
         paymentAttemptRepository.save(
             PaymentAttempt(
                 invoiceSeq = invoiceSeq,
-                paymentSystem = paymentSystem,
                 requestedAt = requestedAt
             )
         )
@@ -34,10 +32,9 @@ class PaymentAttemptService(
     }
 
     @Transactional
-    fun succeeded(invoiceSeq: Long, approvedAt: Instant, pgTransactionKey: String) {
+    fun succeeded(invoiceSeq: Long, approvedAt: Instant) {
         val affectedRows = paymentAttemptRepository.succeeded(
             invoiceSeq,
-            pgTransactionKey,
             setOf(PaymentAttemptStatus.PENDING),
             PaymentAttemptStatus.SUCCEEDED,
             approvedAt

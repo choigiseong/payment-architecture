@@ -20,13 +20,9 @@ class RefundAttempt(
     var id: Long? = null,
     @Column(nullable = false)
     var invoiceSeq: Long,
-    @Column(nullable = false)
-    var paymentAttemptSeq: Long,
-//    @Column(nullable = true)          // 음
+//    @Column(nullable = true)
 //    var pgTransactionKey: String?,
 //    @Enumerated(EnumType.STRING)
-//    @Column(nullable = false)
-//    var paymentSystem: PaymentSystem,
     @Column(nullable = true)
     var pgTransactionKey: String? = null, // '이번 환불'의 고유 키
     @Column(nullable = false)

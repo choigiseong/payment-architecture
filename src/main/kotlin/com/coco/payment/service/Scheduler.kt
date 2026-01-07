@@ -31,13 +31,14 @@ class Scheduler(
 
     private fun processPaymentRecovery(attempt: PaymentAttempt, now: Instant) {
         val invoice = invoiceService.findById(attempt.invoiceSeq)
-        val result = paymentFacade.findTransaction(invoice.externalOrderKey, attempt.paymentSystem)
+        val result = paymentFacade.findTransaction(invoice.paymentSystem, invoice.externalOrderKey)
         when (result) {
             is PgResult.Success -> {
                 paymentFacade.successBilling(
                     result.value.toConfirmResult()
                 )
             }
+
             is PgResult.Fail -> {
                 paymentFacade.failPayment(
                     invoice.id!!,
@@ -45,6 +46,7 @@ class Scheduler(
                     result.error.message
                 )
             }
+
             is PgResult.Retryable -> {
                 invoiceService.updateLastAttemptAt(invoice.id!!, now)
             }

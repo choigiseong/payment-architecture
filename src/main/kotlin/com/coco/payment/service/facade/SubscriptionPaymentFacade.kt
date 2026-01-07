@@ -1,5 +1,6 @@
 package com.coco.payment.service.facade
 
+import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.persistence.model.Customer
 import com.coco.payment.service.InvoiceService
 import com.coco.payment.service.PaymentAttemptService
@@ -26,12 +27,14 @@ class SubscriptionPaymentFacade(
     // 결제 실패는 연체인 애들은 어떻게 결제할 것인가? 상태 관리는?
 
     fun paymentSubscribe(
+        paymentSystem: PaymentSystem,
         customer: Customer,
         uuid: UUID,
         at: Instant
     ) {
         val subscription = subscriptionService.findSubscriptionByCustomerSeq(customer.id!!)
         val invoice = invoiceService.findOrCreateCurrentSubscriptionInvoice(
+            paymentSystem,
             customer.id!!,
             subscription.id!!,
             subscription.nextBillingDate,
@@ -47,7 +50,8 @@ class SubscriptionPaymentFacade(
             return
         }
 
-        val billingKey = customer.findLastBillingKey(subscription.billingKey) ?: throw IllegalArgumentException("Billing key not found")
+        val billingKey = customer.findLastBillingKey(subscription.billingKey)
+            ?: throw IllegalArgumentException("Billing key not found")
         val paymentSystem = billingKey.paymentSystem
         // todo try catch or retry해야한다. 연체..
 
@@ -83,7 +87,6 @@ class SubscriptionPaymentFacade(
     ) {
         val now = Instant.now()
         val invoice = invoiceService.findById(invoiceSeq)
-        val successPayment = paymentAttemptService.findSuccessByInvoice(invoiceSeq)
 
         // todo 이게 맞나? pending 환불이 있는 경우는? 취소 금액으로 판정?
         val alreadyRefundedAmount = refundAttemptService.sumSuccessAmountByInvoice(invoiceSeq)
@@ -95,11 +98,10 @@ class SubscriptionPaymentFacade(
 
         val refundResult = paymentFacade.refund(
             invoice.id!!,
-            successPayment.id!!,
             now,
             BillingView.RefundBillingCommand(
-                successPayment.pgTransactionKey!!,
-                successPayment.paymentSystem,
+                invoice.pgTransactionKey!!,
+                invoice.paymentSystem,
                 refundAmount,
                 reason
             )

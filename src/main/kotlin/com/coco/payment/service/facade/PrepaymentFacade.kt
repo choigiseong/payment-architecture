@@ -32,6 +32,7 @@ class PrepaymentFacade(
     @Transactional
     fun authorizePrepayment(
         customer: Customer,
+        paymentSystem: PaymentSystem,
         orderSeq: Long,
         totalAmount: Long,
         couponList: List<PrepaymentView.CouponDiscountCommand>,
@@ -53,7 +54,7 @@ class PrepaymentFacade(
         val summary = PrepaymentView.PaymentSummary.of(totalAmount, couponHoldResults, pointHoldResult)
 
         val invoice = invoiceService.createPrepaymentInvoice(
-            customer.id!!, orderSeq, summary, uuid, at
+            paymentSystem, customer.id!!, orderSeq, summary, uuid, at
         )
 
         for (coupon in couponHoldResults.coupons) {
@@ -72,10 +73,6 @@ class PrepaymentFacade(
 
 
     // 승인 단계 메소드 작성
-    // 인증때 생성한 거 검증
-    // 승인 단계에서 api 치고
-    // invoice기반으로 hold된 쿠폰, 포인트 사용 및 상태 업데이트
-    // 그리고 상태 변경 쭉
     // 실패 시 hold했던 것들 풀어주고
 
     fun confirmPrepayment(

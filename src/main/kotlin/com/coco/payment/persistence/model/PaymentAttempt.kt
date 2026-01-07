@@ -23,11 +23,6 @@ class PaymentAttempt(
     var invoiceSeq: Long,
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    var paymentSystem: PaymentSystem,
-    @Column(nullable = false)
-    var pgTransactionKey: String? = null,
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     var status: PaymentAttemptStatus = PaymentAttemptStatus.PENDING,
     @Column(nullable = false)
     var requestedAt: Instant,

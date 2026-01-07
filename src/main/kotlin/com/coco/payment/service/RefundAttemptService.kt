@@ -14,7 +14,6 @@ class RefundAttemptService(
 
     fun createAttempt(
         invoiceSeq: Long,
-        paymentAttemptSeq: Long,
         amount: Long,
         reason: String,
         at: Instant
@@ -22,7 +21,6 @@ class RefundAttemptService(
         refundAttemptRepository.save(
             RefundAttempt(
                 invoiceSeq = invoiceSeq,
-                paymentAttemptSeq = paymentAttemptSeq,
                 amount = amount,
                 reason = reason,
                 requestedAt = at,
