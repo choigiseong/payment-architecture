@@ -1,5 +1,8 @@
 package com.coco.payment.service.dto
 
+import com.coco.payment.persistence.enumerator.PaymentSystem
+import java.time.Instant
+
 interface PrepaymentView {
 
     data class CouponDiscountCommand(
@@ -66,14 +69,30 @@ interface PrepaymentView {
     }
 
     data class ConfirmPrepaymentCommand(
-
+        val paymentSystem: PaymentSystem,
+        val pgTransactionKey: String,
+        val externalOrderKey: String,
+        val amount: Long,
     )
 
     interface ConfirmResult {
+        val paymentSystem: PaymentSystem
+
 
         data class TossConfirmResult(
-
-        ): ConfirmResult
+            override val paymentSystem: PaymentSystem,
+            val paymentKey: String,
+            val type: String,
+            val mId: String,
+            val lastTransactionKey: String,
+            val orderId: String,
+            val totalAmount: Long,
+            val balanceAmount: Long,
+            val status: String,
+            val requestedAt: Instant,
+            val approvedAt: Instant,
+            val taxFreeAmount: Long,
+        ) : ConfirmResult
     }
 
 

@@ -53,11 +53,7 @@ class PrepaymentFacade(
         val summary = PrepaymentView.PaymentSummary.of(totalAmount, couponHoldResults, pointHoldResult)
 
         val invoice = invoiceService.createPrepaymentInvoice(
-            customer.id!!,
-            orderSeq,
-            summary,
-            uuid,
-            at
+            customer.id!!, orderSeq, summary, uuid, at
         )
 
         for (coupon in couponHoldResults.coupons) {
@@ -67,10 +63,7 @@ class PrepaymentFacade(
         // 포인트 처리 방식을 더 좋게할 수 없나
         if (pointHoldResult != null) {
             invoiceDiscountService.create(
-                invoice.id!!,
-                DiscountType.POINT,
-                pointHoldResult.pointTransactionSeq,
-                pointHoldResult.amount
+                invoice.id!!, DiscountType.POINT, pointHoldResult.pointTransactionSeq, pointHoldResult.amount
             )
         }
 
@@ -86,11 +79,7 @@ class PrepaymentFacade(
     // 실패 시 hold했던 것들 풀어주고
 
     fun confirmPrepayment(
-        externalOrderKey: String,
-        paymentKey: String,
-        paymentSystem: PaymentSystem,
-        amount: Long,
-        at: Instant
+        externalOrderKey: String, pgTransactionKey: String, paymentSystem: PaymentSystem, amount: Long, at: Instant
     ) {
         // 1. 상태 검증 (이미 결제되었거나 취소된 건인지)
         val invoice = invoiceService.findByExternalOrderKey(externalOrderKey)
@@ -100,27 +89,24 @@ class PrepaymentFacade(
         require(invoice.paidAmount == amount) { "결제 금액이 일치하지 않습니다." }
         // 쿠폰 사용 가능? hold임?
 
-        // 2. [API 단계] PG 승인 요청
-        // Subscription과 마찬가지로 confirmBilling과 유사한 PG 승인 메서드 호출
         val confirmResult = paymentFacade.confirmPrepayment(
-            invoice.id!!,
-            invoice.externalOrderKey,
-            paymentSystem,
-            invoice.paidAmount,
-            at
+            invoice.id!!, PrepaymentView.ConfirmPrepaymentCommand(
+                paymentSystem,
+                pgTransactionKey,
+                invoice.externalOrderKey,
+                invoice.paidAmount,
+            ), at
         )
 
-        // 3. [성공 후 비즈니스 로직 단계]
         // 여기서부터는 DB 트랜잭션 영역이며, 실패 시 스케줄러/콜백이 보정함
         try {
             paymentFacade.successPrepayment(confirmResult)
         } catch (e: Exception) {
-            // 결제는 성공했지만 내부 로직(주문완료 처리 등) 실패 시 로그 남김
-            // 보정은 배치/스케줄러가 invoice.status == PENDING && PG승인여부=YES인 건을 찾아 처리
 //            log.error("Payment successful but business logic failed for invoice: ${invoice.id}", e)
         }
     }
 
+    // todo 선결제 환불
     // 환불 시 배송비는 제외해야함
     // 부분환불 시 쿠폰은 item단위로
 }

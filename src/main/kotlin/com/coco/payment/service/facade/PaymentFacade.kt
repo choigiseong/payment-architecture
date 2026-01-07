@@ -8,6 +8,7 @@ import com.coco.payment.service.InvoiceService
 import com.coco.payment.service.PaymentAttemptService
 import com.coco.payment.service.RefundAttemptService
 import com.coco.payment.service.dto.BillingView
+import com.coco.payment.service.dto.PrepaymentView
 import com.coco.payment.service.strategy.PaymentStrategyManager
 import jakarta.transaction.Transactional
 import org.springframework.stereotype.Service
@@ -106,23 +107,21 @@ class PaymentFacade(
 
     fun confirmPrepayment(
         invoiceSeq: Long,
-        externalOrderKey: String,
-        paymentSystem: PaymentSystem,
-        amount: Long,
+        command: PrepaymentView.ConfirmPrepaymentCommand,
         at: Instant
-    ) {
+    ): PrepaymentView.ConfirmResult {
         paymentAttemptService.createPaymentAttempt(
             invoiceSeq,
-            paymentSystem,
+            command.paymentSystem,
             at
         )
 
-        val strategy = strategyManager.prepaymentPaymentResolve(paymentSystem)
-        return strategy.confirmPrepayment()
+        val strategy = strategyManager.prepaymentPaymentResolve(command.paymentSystem)
+        return strategy.confirmPrepayment(command)
     }
 
-    fun successPrepayment(paymentSystem: PaymentSystem) {
-        val strategy = strategyManager.prepaymentPaymentResolve(paymentSystem)
+    fun successPrepayment(confirmResult: PrepaymentView.ConfirmResult) {
+        val strategy = strategyManager.prepaymentPaymentResolve(confirmResult.paymentSystem)
         strategy.onSuccessPrepayment(confirmResult)
     }
 

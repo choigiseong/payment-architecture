@@ -148,7 +148,10 @@ class TossPaymentService(
     fun confirmPrepayment(command: PrepaymentView.ConfirmPrepaymentCommand): PrepaymentView.ConfirmResult {
 
         val response = tossPaymentClient.confirmPrepayment(
-            TossPaymentView.TossConfirmBillingRequest(
+            TossPaymentView.TossConfirmPrepaymentRequest(
+                command.pgTransactionKey,
+                command.externalOrderKey,
+                command.amount
             )
         )
 
