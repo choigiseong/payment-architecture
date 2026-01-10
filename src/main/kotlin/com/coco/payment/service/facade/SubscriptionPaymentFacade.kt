@@ -88,18 +88,17 @@ class SubscriptionPaymentFacade(
         val now = Instant.now()
         val invoice = invoiceService.findById(invoiceSeq)
 
-        // todo 이게 맞나? pending 환불이 있는 경우는? 취소 금액으로 판정?
-        val alreadyRefundedAmount = refundAttemptService.sumSuccessAmountByInvoice(invoiceSeq)
-        val refundableAmount = invoice.refundableAmount(alreadyRefundedAmount)
+        // 1. 환불 가능 금액 검증 및 시도 생성 (비관적 락 사용, 트랜잭션 커밋됨)
+        refundAttemptService.createAttemptIfRefundable(
+            invoiceSeq = invoiceSeq,
+            requestAmount = refundAmount,
+            reason = reason,
+            at = now
+        )
 
-        if (refundableAmount < refundAmount) {
-            throw IllegalStateException("환불 가능 잔액 부족 (잔액: $refundableAmount)")
-        }
-
-        val refundResult = paymentFacade.refund(
-            invoice.id!!,
-            now,
-            BillingView.RefundBillingCommand(
+        // 2. PG사 환불 요청 (트랜잭션 없음)
+        val refundResult = paymentFacade.requestRefundBillingToPg(
+            command = BillingView.RefundBillingCommand(
                 invoice.pgTransactionKey!!,
                 invoice.paymentSystem,
                 refundAmount,
@@ -109,6 +108,7 @@ class SubscriptionPaymentFacade(
 
 
         try {
+            // 3. 성공 처리 (트랜잭션)
             paymentFacade.successRefundBilling(
                 refundResult
             )

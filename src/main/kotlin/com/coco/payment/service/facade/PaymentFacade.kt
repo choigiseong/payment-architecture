@@ -62,23 +62,13 @@ class PaymentFacade(
         )
     }
 
-    fun refund(
-        invoiceSeq: Long,
-        at: Instant,
+    fun requestRefundBillingToPg(
         command: BillingView.RefundBillingCommand
     ): BillingView.RefundResult {
-        refundAttemptService.createAttempt(
-            invoiceSeq = invoiceSeq,
-            amount = command.amount,
-            reason = command.reason,
-            at = at
-        )
-
         val strategy = strategyManager.billingPaymentResolve(command.paymentSystem)
-        return strategy.refundBilling(
-            command
-        )
+        return strategy.refundBilling(command)
     }
+
 
     fun successBilling(
         confirmResult: BillingView.ConfirmResult
