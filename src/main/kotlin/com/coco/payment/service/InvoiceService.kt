@@ -104,6 +104,10 @@ class InvoiceService(
             ?: throw IllegalArgumentException("Invoice not found")
     }
 
+    fun findByOrderSeq(orderSeq: Long): Invoice? {
+        return invoiceRepository.findByOrderSeq(orderSeq)
+    }
+
 
     @Transactional
     fun handleRetryOrFinalFailed(id: Long, at: Instant) {

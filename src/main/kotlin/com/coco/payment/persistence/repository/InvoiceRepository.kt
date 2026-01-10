@@ -18,6 +18,7 @@ interface InvoiceRepository : JpaRepository<Invoice, Long> {
     fun findBySubscriptionSeqAndExternalOrderKey(subscriptionSeq: Long, externalOrderKey: String): Invoice?
     fun findBySubscriptionSeqAndPeriodStart(subscriptionSeq: Long, periodStart: LocalDate): Invoice?
     fun findByExternalOrderKey(externalOrderKey: String): Invoice?
+    fun findByOrderSeq(orderSeq: Long): Invoice?
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT i FROM Invoice i WHERE i.id = :id")
