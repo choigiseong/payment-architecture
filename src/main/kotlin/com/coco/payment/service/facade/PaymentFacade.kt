@@ -46,18 +46,34 @@ class PaymentFacade(
         )
     }
 
-    fun requestConfirmBillingToPg(
+    fun confirmBilling(
+        invoiceSeq: Long,
+        requestedAt: Instant,
         confirmBillingCommand: BillingView.ConfirmBillingCommand
     ): BillingView.ConfirmResult {
+        paymentAttemptService.createPaymentAttempt(
+            invoiceSeq,
+            requestedAt
+        )
+
         val strategy = strategyManager.billingPaymentResolve(confirmBillingCommand.paymentSystem)
         return strategy.confirmBilling(
             confirmBillingCommand
         )
     }
 
-    fun requestRefundBillingToPg(
+    fun refundBilling(
+        invoiceSeq: Long,
+        at: Instant,
         command: BillingView.RefundBillingCommand
     ): BillingView.RefundResult {
+        refundAttemptService.createAttemptIfRefundable(
+            invoiceSeq = invoiceSeq,
+            requestAmount = command.amount,
+            reason = command.reason,
+            at = at
+        )
+
         val strategy = strategyManager.billingPaymentResolve(command.paymentSystem)
         return strategy.refundBilling(command)
     }
@@ -84,9 +100,16 @@ class PaymentFacade(
         invoiceService.handleRetryOrFinalFailed(invoiceSeq, at)
     }
 
-    fun requestConfirmPrepaymentToPg(
+    fun confirmPrepayment(
+        invoiceSeq: Long,
         command: PrepaymentView.ConfirmPrepaymentCommand,
+        at: Instant
     ): PrepaymentView.ConfirmResult {
+        paymentAttemptService.createPaymentAttempt(
+            invoiceSeq,
+            at
+        )
+
         val strategy = strategyManager.prepaymentPaymentResolve(command.paymentSystem)
         return strategy.confirmPrepayment(command)
     }
@@ -96,9 +119,18 @@ class PaymentFacade(
         strategy.onSuccessPrepayment(confirmResult)
     }
 
-    fun requestRefundPrepaymentToPg(
+    fun refundPrepayment(
+        invoiceSeq: Long,
+        at: Instant,
         command: PrepaymentView.RefundPrepaymentCommand
     ): PrepaymentView.RefundResult {
+        refundAttemptService.createAttemptIfRefundable(
+            invoiceSeq = invoiceSeq,
+            requestAmount = command.amount,
+            reason = command.reason,
+            at = at
+        )
+
         val strategy = strategyManager.prepaymentPaymentResolve(command.paymentSystem)
         return strategy.refundPrepayment(command)
     }

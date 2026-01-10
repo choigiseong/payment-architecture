@@ -55,14 +55,10 @@ class SubscriptionPaymentFacade(
         val paymentSystem = billingKey.paymentSystem
         // todo try catch or retry해야한다. 연체..
 
-        // 1. 결제 시도 생성 (트랜잭션)
-        paymentAttemptService.createPaymentAttempt(
+        // 1. 결제 시도 생성 및 PG 요청 (PaymentFacade 내부에서 처리)
+        val confirmResult = paymentFacade.confirmBilling(
             invoice.id!!,
-            at
-        )
-
-        // 2. PG사 결제 요청 (트랜잭션 없음)
-        val confirmResult = paymentFacade.requestConfirmBillingToPg(
+            at,
             BillingView.ConfirmBillingCommand(
                 billingKey.billingKey,
                 customer.id!!,
@@ -76,7 +72,7 @@ class SubscriptionPaymentFacade(
         )
 
         try {
-            // 3. 성공 처리 (트랜잭션)
+            // 2. 성공 처리 (트랜잭션)
             paymentFacade.successBilling(
                 confirmResult
             )
@@ -94,16 +90,10 @@ class SubscriptionPaymentFacade(
         val now = Instant.now()
         val invoice = invoiceService.findById(invoiceSeq)
 
-        // 1. 환불 가능 금액 검증 및 시도 생성 (비관적 락 사용, 트랜잭션 커밋됨)
-        refundAttemptService.createAttemptIfRefundable(
+        // 1. 환불 가능 금액 검증, 시도 생성 및 PG 요청 (PaymentFacade 내부에서 처리)
+        val refundResult = paymentFacade.refundBilling(
             invoiceSeq = invoiceSeq,
-            requestAmount = refundAmount,
-            reason = reason,
-            at = now
-        )
-
-        // 2. PG사 환불 요청 (트랜잭션 없음)
-        val refundResult = paymentFacade.requestRefundBillingToPg(
+            at = now,
             command = BillingView.RefundBillingCommand(
                 invoice.pgTransactionKey!!,
                 invoice.paymentSystem,
@@ -114,7 +104,7 @@ class SubscriptionPaymentFacade(
 
 
         try {
-            // 3. 성공 처리 (트랜잭션)
+            // 2. 성공 처리 (트랜잭션)
             paymentFacade.successRefundBilling(
                 refundResult
             )

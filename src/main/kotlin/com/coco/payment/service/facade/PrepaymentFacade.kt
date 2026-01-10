@@ -88,25 +88,20 @@ class PrepaymentFacade(
         require(invoice.paidAmount == amount) { "결제 금액이 일치하지 않습니다." }
         invoiceDiscountService.checkDiscountIsHold(invoice.id!!)
 
-        // 2. 결제 시도 생성 (트랜잭션)
-        paymentAttemptService.createPaymentAttempt(
+        // 2. 결제 시도 생성 및 PG 요청 (PaymentFacade 내부에서 처리)
+        val confirmResult = paymentFacade.confirmPrepayment(
             invoice.id!!,
-            at
-        )
-
-        // todo 실패 시 hold했던 것들 풀어주고
-        // 3. PG사 결제 요청 (트랜잭션 없음)
-        val confirmResult = paymentFacade.requestConfirmPrepaymentToPg(
             PrepaymentView.ConfirmPrepaymentCommand(
                 paymentSystem,
                 pgTransactionKey,
                 invoice.externalOrderKey,
                 invoice.paidAmount,
-            )
+            ),
+            at
         )
 
         try {
-            // 4. 성공 처리 (트랜잭션)
+            // 3. 성공 처리 (트랜잭션)
             paymentFacade.successPrepayment(confirmResult)
         } catch (e: Exception) {
             // 실패 시 스케줄러/콜백이 보정함
@@ -126,16 +121,10 @@ class PrepaymentFacade(
     ) {
         val invoice = invoiceService.findById(invoiceId)
 
-        // 1. 환불 가능 금액 검증 및 시도 생성 (비관적 락 사용, 트랜잭션 커밋됨)
-        refundAttemptService.createAttemptIfRefundable(
+        // 1. 환불 가능 금액 검증, 시도 생성 및 PG 요청 (PaymentFacade 내부에서 처리)
+        val refundResult = paymentFacade.refundPrepayment(
             invoiceSeq = invoiceId,
-            requestAmount = refundAmount,
-            reason = reason,
-            at = at
-        )
-
-        // 2. PG사 환불 요청 (트랜잭션 없음)
-        val refundResult = paymentFacade.requestRefundPrepaymentToPg(
+            at = at,
             command = PrepaymentView.RefundPrepaymentCommand(
                 originalTransactionKey = invoice.pgTransactionKey!!,
                 paymentSystem = invoice.paymentSystem,
@@ -145,7 +134,7 @@ class PrepaymentFacade(
         )
 
         try {
-            // 3. 성공 처리 (트랜잭션)
+            // 2. 성공 처리 (트랜잭션)
             paymentFacade.successRefundPrepayment(refundResult, refundAmount)
         } catch (e: Exception) {
             // 환불 실패 시 로깅 및 예외 처리
