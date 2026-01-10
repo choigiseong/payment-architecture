@@ -64,14 +64,14 @@ class RefundAttemptService(
         // 중복 환불 요청으로 인한 초과 환불을 방지할 수 있습니다.
         return refundAttemptRepository.sumAmountByInvoiceAndStatusIn(
             invoiceSeq,
-            listOf(RefundAttemptStatus.SUCCEEDED.name, RefundAttemptStatus.PENDING.name)
+            listOf(RefundAttemptStatus.SUCCEEDED, RefundAttemptStatus.PENDING)
         )
     }
 
     fun sumSucceededAmountByInvoice(invoiceSeq: Long): Long {
         return refundAttemptRepository.sumAmountByInvoiceAndStatusIn(
             invoiceSeq,
-            listOf(RefundAttemptStatus.SUCCEEDED.name)
+            listOf(RefundAttemptStatus.SUCCEEDED)
         )
     }
 

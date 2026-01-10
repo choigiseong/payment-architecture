@@ -1,9 +1,7 @@
 package com.coco.payment.persistence.repository
 
-import com.coco.payment.persistence.enumerator.InvoiceStatus
 import com.coco.payment.persistence.enumerator.RefundAttemptStatus
 import com.coco.payment.persistence.model.RefundAttempt
-import org.hibernate.annotations.processing.SQL
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
@@ -15,12 +13,11 @@ interface RefundAttemptRepository : JpaRepository<RefundAttempt, Long> {
 
     @Query(
         value = """
-            SELECT COALESCE(SUM(amount), 0) FROM refund_attempt
-            WHERE invoice_seq = :invoiceSeq AND status IN (:statuses)
-        """,
-        nativeQuery = true
+            SELECT COALESCE(SUM(ra.amount), 0) FROM RefundAttempt ra
+            WHERE ra.invoiceSeq = :invoiceSeq AND ra.status IN :statuses
+        """
     )
-    fun sumAmountByInvoiceAndStatusIn(invoiceSeq: Long, statuses: List<String>): Long
+    fun sumAmountByInvoiceAndStatusIn(invoiceSeq: Long, statuses: List<RefundAttemptStatus>): Long
 
     @Modifying
     @Query(
