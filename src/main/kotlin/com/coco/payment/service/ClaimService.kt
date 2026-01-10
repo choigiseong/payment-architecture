@@ -15,8 +15,7 @@ import java.time.Instant
 class ClaimService(
     private val claimRepository: ClaimRepository,
     private val claimItemRepository: ClaimItemRepository,
-    private val prepaymentFacade: PrepaymentFacade,
-    private val invoiceService: InvoiceService // Invoice 조회를 위해 추가
+    private val invoiceService: InvoiceService
 ) {
 
     @Transactional
@@ -48,53 +47,54 @@ class ClaimService(
         return claim.id!!
     }
 
-    // 검수 완료 및 환불 진행
+    // 검수 완료 (환불 대기 상태로 변경)
     @Transactional
     fun completeClaim(claimSeq: Long) {
-        val claim = claimRepository.findById(claimSeq)
-            .orElseThrow { IllegalArgumentException("Claim not found") }
-
-        // 1. 상태 변경 (반품 확정)
         val affected = claimRepository.updateStatus(
-            claim.id!!,
+            claimSeq,
             setOf(ClaimStatus.REQUESTED, ClaimStatus.INSPECTING),
             ClaimStatus.COMPLETED
         )
         if (affected != 1) {
+            val claim = claimRepository.findById(claimSeq).get()
             throw IllegalStateException("Invalid claim status for completion: ${claim.status}")
         }
+    }
 
-        // 2. 환불 요청 데이터 준비
-        val claimItems = claimItemRepository.findByClaimSeq(claimSeq)
-        val totalRefundAmount = claimItems.sumOf { it.claimAmount }
-        val refundItems = claimItems.map {
-            PrepaymentView.RefundItemCommand(
-                orderItemSeq = it.orderItemSeq,
-                refundAmount = it.claimAmount
-            )
-        }
-
-        // 3. 환불 실행 (PrepaymentFacade 호출)
-        // Claim의 orderSeq를 사용하여 관련된 Invoice를 찾아야 함.
-        // 여기서는 orderSeq와 1:1 매칭되는 Invoice가 있다고 가정.
-        val invoice = invoiceService.findByOrderSeq(claim.orderSeq)
-            ?: throw IllegalStateException("Invoice not found for order: ${claim.orderSeq}")
-
-        // 주의: 여기서 예외 발생 시 Claim 상태 변경도 롤백됨 (Transactional)
-        prepaymentFacade.refundPrepayment(
-            invoiceId = invoice.id!!,
-            refundAmount = totalRefundAmount,
-            reason = claim.reason,
-            at = Instant.now(),
-            refundItems = refundItems
-        )
-
-        // 4. 환불 완료 상태로 변경 (선택 사항, 환불 로직이 동기적으로 성공했다고 가정)
-        claimRepository.updateStatus(
-            claim.id!!,
+    @Transactional
+    fun startRefundProcessing(claimId: Long) {
+        val affected = claimRepository.updateStatus(
+            claimId,
             setOf(ClaimStatus.COMPLETED),
+            ClaimStatus.REFUND_PROCESSING
+        )
+        if (affected != 1) {
+            throw IllegalStateException("Claim $claimId is already being processed or in an invalid state.")
+        }
+    }
+
+    @Transactional
+    fun succeedRefund(claimId: Long) {
+        val affected = claimRepository.updateStatus(
+            claimId,
+            setOf(ClaimStatus.REFUND_PROCESSING),
             ClaimStatus.REFUNDED
         )
+        if (affected != 1) {
+            throw IllegalStateException("Invalid claim status for refund success: $claimId")
+        }
+    }
+
+    @Transactional
+    fun failRefund(claimId: Long) {
+        val affected = claimRepository.updateStatus(
+            claimId,
+            setOf(ClaimStatus.REFUND_PROCESSING),
+            ClaimStatus.REFUND_FAILED
+        )
+        if (affected != 1) {
+            throw IllegalStateException("Invalid claim status for refund failure: $claimId")
+        }
     }
 
     data class ClaimItemRequest(

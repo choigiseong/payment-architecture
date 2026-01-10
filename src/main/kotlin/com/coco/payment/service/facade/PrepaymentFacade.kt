@@ -118,7 +118,7 @@ class PrepaymentFacade(
         refundAmount: Long,
         reason: String,
         at: Instant,
-        refundItems: List<PrepaymentView.RefundItemCommand> = emptyList()
+        refundItems: List<PrepaymentView.RefundItemCommand>
     ) {
         val invoice = invoiceService.findById(invoiceId)
 

@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.stereotype.Repository
+import java.time.Instant
 
 @Repository
 interface ClaimRepository : JpaRepository<Claim, Long> {
@@ -13,4 +14,9 @@ interface ClaimRepository : JpaRepository<Claim, Long> {
     @Modifying
     @Query("UPDATE Claim c SET c.status = :toStatus WHERE c.id = :id AND c.status IN :fromStatus")
     fun updateStatus(id: Long, fromStatus: Set<ClaimStatus>, toStatus: ClaimStatus): Int
+
+    fun findByStatus(status: ClaimStatus): List<Claim>
+
+    @Query("SELECT c FROM Claim c WHERE c.status = :status AND c.updatedAt < :time")
+    fun findByStatusAndUpdatedAtBefore(status: ClaimStatus, time: Instant): List<Claim>
 }
