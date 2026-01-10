@@ -83,23 +83,28 @@ class TossBillingPaymentStrategy(
             throw IllegalArgumentException("Provider response is not TossCancelResult")
         }
         val invoice = invoiceService.findByExternalOrderKey(refundResult.orderId)
+        // 락을 걸고 Invoice 조회 (동시성 제어)
+        invoiceService.findByIdWithLock(invoice.id!!)
+
         val subscription = subscriptionService.findById(invoice.subscriptionSeq!!)
 
-        if (!refundResult.isRefundable()) {
-            subscriptionService.cancel(subscription.id!!)
-            invoiceService.refunded(invoice.id!!)
-        } else {
-            invoiceService.partiallyRefunded(invoice.id!!)
-        }
-
-        // todo 동시 다중 환불 요청을 방지하기 위해, 환불 처리 중인 경우 다른 환불 요청을 차단해야 합니다.
-        // 이게 최선인가?
         val lastCanceled = refundResult.getLastCanceledInfo()
         refundAttemptService.succeeded(
             invoice.id!!,
             lastCanceled.canceledAt,
             lastCanceled.transactionKey
         )
+
+        // 현재까지 성공한 환불 총액 조회 (방금 성공 처리한 건 포함)
+        val totalRefundedAmount = refundAttemptService.sumSucceededAmountByInvoice(invoice.id!!)
+        val isFullRefund = (totalRefundedAmount >= invoice.paidAmount)
+
+        if (isFullRefund) {
+            subscriptionService.cancel(subscription.id!!)
+            invoiceService.refunded(invoice.id!!)
+        } else {
+            invoiceService.partiallyRefunded(invoice.id!!)
+        }
 
         // 원장/이벤트 기록 (선택, 메서드 추가 필요)
 //         val ledger = ledgerService.createLedger(subscription.customerSeq)

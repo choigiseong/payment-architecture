@@ -54,7 +54,10 @@ class TossPrepaymentStrategy(
             throw IllegalArgumentException("Provider response is not TossRefundResult")
         }
 
+        // 락을 걸고 Invoice 조회 (동시성 제어)
         val invoice = invoiceService.findByExternalOrderKey(refundResult.orderId)
+        invoiceService.findByIdWithLock(invoice.id!!)
+
         val lastCanceledInfo = refundResult.getLastCanceledInfo()
 
         refundAttemptService.succeeded(

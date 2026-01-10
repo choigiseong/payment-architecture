@@ -88,6 +88,11 @@ class InvoiceService(
             .orElseThrow { IllegalArgumentException("Invoice not found") }
     }
 
+    fun findByIdWithLock(id: Long): Invoice {
+        return invoiceRepository.findByIdWithLock(id)
+            .orElseThrow { IllegalArgumentException("Invoice not found") }
+    }
+
     fun findInvoiceBySubscriptionSeq(subscriptionSeq: Long): List<Invoice> {
         return invoiceRepository.findBySubscriptionSeq(subscriptionSeq)
     }
