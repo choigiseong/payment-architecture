@@ -80,7 +80,6 @@ class PaymentFacade(
         )
     }
 
-
     fun successBilling(
         confirmResult: BillingView.ConfirmResult
     ) {
@@ -121,7 +120,14 @@ class PaymentFacade(
         strategy.onSuccessPrepayment(confirmResult)
     }
 
-    fun successRefundPrepayment(refundResult: BillingView.RefundResult, refundAmount: Long) {
+    fun requestRefundPrepaymentToPg(
+        command: PrepaymentView.RefundPrepaymentCommand
+    ): PrepaymentView.RefundResult {
+        val strategy = strategyManager.prepaymentPaymentResolve(command.paymentSystem)
+        return strategy.refundPrepayment(command)
+    }
+
+    fun successRefundPrepayment(refundResult: PrepaymentView.RefundResult, refundAmount: Long) {
         val strategy = strategyManager.prepaymentPaymentResolve(refundResult.paymentSystem)
         strategy.onSuccessRefundPrepayment(refundResult, refundAmount)
     }

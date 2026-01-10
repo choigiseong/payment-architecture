@@ -9,7 +9,6 @@ import com.coco.payment.service.PaymentAttemptService
 import com.coco.payment.service.PointService
 import com.coco.payment.service.RefundAttemptService
 import com.coco.payment.service.TossPaymentService
-import com.coco.payment.service.dto.BillingView
 import com.coco.payment.service.dto.PrepaymentView
 import jakarta.transaction.Transactional
 import org.springframework.stereotype.Service
@@ -50,8 +49,8 @@ class TossPrepaymentStrategy(
     }
 
     @Transactional
-    override fun onSuccessRefundPrepayment(refundResult: BillingView.RefundResult, refundAmount: Long) {
-        if (refundResult !is BillingView.RefundResult.TossRefundResult) {
+    override fun onSuccessRefundPrepayment(refundResult: PrepaymentView.RefundResult, refundAmount: Long) {
+        if (refundResult !is PrepaymentView.RefundResult.TossRefundResult) {
             throw IllegalArgumentException("Provider response is not TossRefundResult")
         }
 
@@ -64,7 +63,9 @@ class TossPrepaymentStrategy(
             lastCanceledInfo.transactionKey
         )
 
-        val isFullRefund = (refundAmount == invoice.paidAmount)
+        // 현재까지 성공한 환불 총액 조회 (방금 성공 처리한 건 포함)
+        val totalRefundedAmount = refundAttemptService.sumSucceededAmountByInvoice(invoice.id!!)
+        val isFullRefund = (totalRefundedAmount >= invoice.paidAmount)
 
         if (isFullRefund) {
             invoiceService.refunded(invoice.id!!)
@@ -91,6 +92,10 @@ class TossPrepaymentStrategy(
                 }
             }
         }
+    }
+
+    override fun refundPrepayment(command: PrepaymentView.RefundPrepaymentCommand): PrepaymentView.RefundResult {
+        return tossPaymentService.cancelPrepayment(command)
     }
 
 }

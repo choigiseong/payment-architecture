@@ -15,12 +15,12 @@ interface RefundAttemptRepository : JpaRepository<RefundAttempt, Long> {
 
     @Query(
         value = """
-            SELECT SUM(amount) FROM refund_attempt
-            WHERE invoice_seq = :invoiceSeq AND status = :status
+            SELECT COALESCE(SUM(amount), 0) FROM refund_attempt
+            WHERE invoice_seq = :invoiceSeq AND status IN (:statuses)
         """,
         nativeQuery = true
     )
-    fun sumSuccessAmountByInvoice(invoiceSeq: Long, status: RefundAttemptStatus): Long
+    fun sumAmountByInvoiceAndStatusIn(invoiceSeq: Long, statuses: List<String>): Long
 
     @Modifying
     @Query(

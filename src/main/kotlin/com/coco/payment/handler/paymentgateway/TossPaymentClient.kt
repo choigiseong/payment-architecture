@@ -31,8 +31,8 @@ interface TossPaymentClient {
         @RequestBody request: TossPaymentView.TossConfirmBillingRequest
     ): TossPaymentView.TossConfirmBillingBillingResponse
 
-    @PostMapping("\${payment.toss.api.endpoint.cancel-billing}")
-    fun cancelBilling(
+    @PostMapping("\${payment.toss.api.endpoint.cancel-payment}")
+    fun cancelPayment(
         @PathVariable paymentKey: String,
         @RequestBody request: TossPaymentView.TossCancelRequest
     ): TossPaymentView.TossCancelResponse

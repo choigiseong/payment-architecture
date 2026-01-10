@@ -71,7 +71,7 @@ class TossPaymentService(
     fun cancelBilling(
         refundBillingCommand: BillingView.RefundBillingCommand
     ): BillingView.RefundResult.TossRefundResult {
-        val response = tossPaymentClient.cancelBilling(
+        val response = tossPaymentClient.cancelPayment(
             refundBillingCommand.originalTransactionKey,
             TossPaymentView.TossCancelRequest(
                 refundBillingCommand.reason,
@@ -168,6 +168,40 @@ class TossPaymentService(
             response.requestedAt,
             response.approvedAt,
             response.taxFreeAmount
+        )
+    }
+
+    fun cancelPrepayment(
+        command: PrepaymentView.RefundPrepaymentCommand
+    ): PrepaymentView.RefundResult.TossRefundResult {
+        val response = tossPaymentClient.cancelPayment(
+            command.originalTransactionKey,
+            TossPaymentView.TossCancelRequest(
+                command.reason,
+                command.amount,
+            )
+        )
+
+        return PrepaymentView.RefundResult.TossRefundResult(
+            PaymentSystem.TOSS,
+            response.paymentKey,
+            response.type,
+            response.mId,
+            response.lastTransactionKey,
+            response.orderId,
+            response.totalAmount,
+            response.balanceAmount,
+            response.status,
+            response.requestedAt,
+            response.approvedAt,
+            response.taxFreeAmount,
+            response.cancels.map {
+                PrepaymentView.RefundResult.TossRefundInfo(
+                    it.cancelAmount,
+                    it.cancelAt,
+                    it.transactionKey
+                )
+            }
         )
     }
 }

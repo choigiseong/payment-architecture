@@ -118,22 +118,17 @@ class PrepaymentFacade(
     ) {
         val invoice = invoiceService.findById(invoiceId)
 
-        // 여기도 그게 있을텐데, 연속 차단. 왜냐면 아래 행위가 이상하거든. 동시성으로 말이자
-        // 이미 환불된 금액 조회
-        val alreadyRefunded = refundAttemptService.sumSuccessAmountByInvoice(invoiceId)
-        val refundableAmount = invoice.paidAmount - alreadyRefunded
-
-        // 환불 가능 금액 검증
-        require(refundAmount > 0) { "환불 금액은 0원보다 커야 합니다." }
-        require(refundAmount <= refundableAmount) {
-            "환불 가능한 최대 금액은 $refundableAmount 원입니다."
-        }
-
-        // 환불 처리
-        val refundResult = paymentFacade.refund(
+        // 1. 환불 가능 금액 검증 및 시도 생성 (비관적 락 사용, 트랜잭션 커밋됨)
+        refundAttemptService.createAttemptIfRefundable(
             invoiceSeq = invoiceId,
-            at = at,
-            command = BillingView.RefundBillingCommand(
+            requestAmount = refundAmount,
+            reason = reason,
+            at = at
+        )
+
+        // 2. PG사 환불 요청 (트랜잭션 없음)
+        val refundResult = paymentFacade.requestRefundPrepaymentToPg(
+            command = PrepaymentView.RefundPrepaymentCommand(
                 originalTransactionKey = invoice.pgTransactionKey!!,
                 paymentSystem = invoice.paymentSystem,
                 amount = refundAmount,
@@ -142,6 +137,7 @@ class PrepaymentFacade(
         )
 
         try {
+            // 3. 성공 처리 (트랜잭션)
             paymentFacade.successRefundPrepayment(refundResult, refundAmount)
         } catch (e: Exception) {
             // 환불 실패 시 로깅 및 예외 처리

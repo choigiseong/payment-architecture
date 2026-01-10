@@ -2,12 +2,15 @@ package com.coco.payment.persistence.repository
 
 import com.coco.payment.persistence.enumerator.InvoiceStatus
 import com.coco.payment.persistence.model.Invoice
+import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.stereotype.Repository
 import java.time.Instant
 import java.time.LocalDate
+import java.util.Optional
 
 @Repository
 interface InvoiceRepository : JpaRepository<Invoice, Long> {
@@ -15,6 +18,10 @@ interface InvoiceRepository : JpaRepository<Invoice, Long> {
     fun findBySubscriptionSeqAndExternalOrderKey(subscriptionSeq: Long, externalOrderKey: String): Invoice?
     fun findBySubscriptionSeqAndPeriodStart(subscriptionSeq: Long, periodStart: LocalDate): Invoice?
     fun findByExternalOrderKey(externalOrderKey: String): Invoice?
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT i FROM Invoice i WHERE i.id = :id")
+    fun findByIdWithLock(id: Long): Optional<Invoice>
 
     @Modifying
     @Query(

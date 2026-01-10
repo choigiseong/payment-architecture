@@ -95,5 +95,49 @@ interface PrepaymentView {
         ) : ConfirmResult
     }
 
+    data class RefundPrepaymentCommand(
+        val originalTransactionKey: String,
+        val paymentSystem: PaymentSystem,
+        val amount: Long,
+        val reason: String
+    )
+
+    interface RefundResult {
+        val paymentSystem: PaymentSystem
+
+        data class TossRefundResult(
+            override val paymentSystem: PaymentSystem = PaymentSystem.TOSS,
+            val paymentKey: String,
+            val type: String,
+            val mId: String,
+            val lastTransactionKey: String,
+            val orderId: String,
+            val totalAmount: Long,
+            val balanceAmount: Long,
+            val status: String,
+            val requestedAt: Instant,
+            val approvedAt: Instant,
+            val taxFreeAmount: Long,
+            val cancelList: List<TossRefundInfo>,
+        ) : RefundResult {
+            override fun isRefundable(): Boolean {
+                return this.balanceAmount != 0L
+            }
+
+            fun getLastCanceledInfo(): TossRefundInfo {
+                return cancelList.find { it.transactionKey == lastTransactionKey }
+                    ?: throw IllegalArgumentException("TossRefundResult not found lastTransactionKey, transactionKey: $lastTransactionKey")
+            }
+        }
+
+        data class TossRefundInfo(
+            val amount: Long,
+            val canceledAt: Instant,
+            val transactionKey: String
+        )
+
+        fun isRefundable(): Boolean
+    }
+
 
 }
