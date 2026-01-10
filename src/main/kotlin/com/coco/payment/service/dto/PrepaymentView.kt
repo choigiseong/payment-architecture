@@ -95,11 +95,17 @@ interface PrepaymentView {
         ) : ConfirmResult
     }
 
+    data class RefundItemCommand(
+        val orderItemSeq: Long,
+        val refundAmount: Long
+    )
+
     data class RefundPrepaymentCommand(
         val originalTransactionKey: String,
         val paymentSystem: PaymentSystem,
         val amount: Long,
-        val reason: String
+        val reason: String,
+        val refundItems: List<RefundItemCommand> = emptyList() // 환불할 아이템 목록 추가
     )
 
     interface RefundResult {

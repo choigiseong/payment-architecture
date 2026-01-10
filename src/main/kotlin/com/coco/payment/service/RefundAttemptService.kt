@@ -2,8 +2,11 @@ package com.coco.payment.service
 
 import com.coco.payment.persistence.enumerator.RefundAttemptStatus
 import com.coco.payment.persistence.model.RefundAttempt
+import com.coco.payment.persistence.model.RefundAttemptItem
 import com.coco.payment.persistence.repository.InvoiceRepository
+import com.coco.payment.persistence.repository.RefundAttemptItemRepository
 import com.coco.payment.persistence.repository.RefundAttemptRepository
+import com.coco.payment.service.dto.PrepaymentView
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -11,6 +14,7 @@ import java.time.Instant
 @Service
 class RefundAttemptService(
     private val refundAttemptRepository: RefundAttemptRepository,
+    private val refundAttemptItemRepository: RefundAttemptItemRepository,
     private val invoiceRepository: InvoiceRepository
 ) {
 
@@ -19,7 +23,8 @@ class RefundAttemptService(
         invoiceSeq: Long,
         requestAmount: Long,
         reason: String,
-        at: Instant
+        at: Instant,
+        refundItems: List<PrepaymentView.RefundItemCommand>
     ) {
         // 비관적 락을 걸어 동시성 제어
         val invoice = invoiceRepository.findByIdWithLock(invoiceSeq)
@@ -32,7 +37,7 @@ class RefundAttemptService(
             throw IllegalStateException("환불 가능한 최대 금액은 $refundableAmount 원입니다.")
         }
 
-        refundAttemptRepository.save(
+        val refundAttempt = refundAttemptRepository.save(
             RefundAttempt(
                 invoiceSeq = invoiceSeq,
                 amount = requestAmount,
@@ -40,6 +45,17 @@ class RefundAttemptService(
                 requestedAt = at,
             )
         )
+
+        if (refundItems.isNotEmpty()) {
+            val refundAttemptItems = refundItems.map {
+                RefundAttemptItem(
+                    refundAttemptSeq = refundAttempt.id!!,
+                    orderItemSeq = it.orderItemSeq,
+                    refundAmount = it.refundAmount
+                )
+            }
+            refundAttemptItemRepository.saveAll(refundAttemptItems)
+        }
     }
 
     fun createAttempt(
@@ -76,7 +92,7 @@ class RefundAttemptService(
     }
 
     @Transactional
-    fun succeeded(invoiceSeq: Long, canceledAt: Instant, pgTransactionKey: String) {
+    fun succeeded(invoiceSeq: Long, canceledAt: Instant, pgTransactionKey: String): RefundAttempt {
         val affected = refundAttemptRepository.succeeded(
             invoiceSeq,
             pgTransactionKey,
@@ -87,6 +103,15 @@ class RefundAttemptService(
         if (affected != 1L) {
             throw IllegalArgumentException("Refund attempt not found")
         }
+        
+        // 성공한 RefundAttempt 반환 (아이템 상태 업데이트를 위해)
+        // pgTransactionKey로 조회해야 함 (유니크하다고 가정)
+        return refundAttemptRepository.findByPgTransactionKey(pgTransactionKey)
+            ?: throw IllegalStateException("Refund attempt not found after update")
+    }
+    
+    fun findItemsByRefundAttemptSeq(refundAttemptSeq: Long): List<RefundAttemptItem> {
+        return refundAttemptItemRepository.findByRefundAttemptSeq(refundAttemptSeq)
     }
 
 }

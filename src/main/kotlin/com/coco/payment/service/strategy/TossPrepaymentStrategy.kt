@@ -5,6 +5,7 @@ import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.service.CouponService
 import com.coco.payment.service.InvoiceDiscountService
 import com.coco.payment.service.InvoiceService
+import com.coco.payment.service.OrderService
 import com.coco.payment.service.PaymentAttemptService
 import com.coco.payment.service.PointService
 import com.coco.payment.service.RefundAttemptService
@@ -21,7 +22,8 @@ class TossPrepaymentStrategy(
     private val refundAttemptService: RefundAttemptService,
     private val invoiceDiscountService: InvoiceDiscountService,
     private val couponService: CouponService,
-    private val pointService: PointService
+    private val pointService: PointService,
+    private val orderService: OrderService
 ) : PrepaymentStrategy {
     override fun supports(paymentSystem: PaymentSystem): Boolean = paymentSystem == PaymentSystem.TOSS
     override fun confirmPrepayment(command: PrepaymentView.ConfirmPrepaymentCommand): PrepaymentView.ConfirmResult {
@@ -60,11 +62,17 @@ class TossPrepaymentStrategy(
 
         val lastCanceledInfo = refundResult.getLastCanceledInfo()
 
-        refundAttemptService.succeeded(
+        val refundAttempt = refundAttemptService.succeeded(
             invoice.id!!,
             lastCanceledInfo.canceledAt,
             lastCanceledInfo.transactionKey
         )
+
+        // 환불된 아이템 상태 업데이트
+        val refundItems = refundAttemptService.findItemsByRefundAttemptSeq(refundAttempt.id!!)
+        for (refundItem in refundItems) {
+            orderService.refundOrderItem(refundItem.orderItemSeq)
+        }
 
         // 현재까지 성공한 환불 총액 조회 (방금 성공 처리한 건 포함)
         val totalRefundedAmount = refundAttemptService.sumSucceededAmountByInvoice(invoice.id!!)

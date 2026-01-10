@@ -117,7 +117,8 @@ class PrepaymentFacade(
         invoiceId: Long,
         refundAmount: Long,
         reason: String,
-        at: Instant
+        at: Instant,
+        refundItems: List<PrepaymentView.RefundItemCommand> = emptyList()
     ) {
         val invoice = invoiceService.findById(invoiceId)
 
@@ -129,7 +130,8 @@ class PrepaymentFacade(
                 originalTransactionKey = invoice.pgTransactionKey!!,
                 paymentSystem = invoice.paymentSystem,
                 amount = refundAmount,
-                reason = reason
+                reason = reason,
+                refundItems = refundItems
             )
         )
 

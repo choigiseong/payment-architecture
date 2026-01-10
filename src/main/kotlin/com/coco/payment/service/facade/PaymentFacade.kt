@@ -128,7 +128,8 @@ class PaymentFacade(
             invoiceSeq = invoiceSeq,
             requestAmount = command.amount,
             reason = command.reason,
-            at = at
+            at = at,
+            refundItems = command.refundItems
         )
 
         val strategy = strategyManager.prepaymentPaymentResolve(command.paymentSystem)

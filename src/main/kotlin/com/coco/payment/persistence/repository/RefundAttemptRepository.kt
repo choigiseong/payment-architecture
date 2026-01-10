@@ -38,4 +38,6 @@ interface RefundAttemptRepository : JpaRepository<RefundAttempt, Long> {
         toStatus: RefundAttemptStatus,
         canceledAt: Instant
     ): Long
+
+    fun findByPgTransactionKey(pgTransactionKey: String): RefundAttempt?
 }
