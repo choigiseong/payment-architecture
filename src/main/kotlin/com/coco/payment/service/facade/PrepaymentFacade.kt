@@ -88,17 +88,25 @@ class PrepaymentFacade(
         require(invoice.paidAmount == amount) { "결제 금액이 일치하지 않습니다." }
         invoiceDiscountService.checkDiscountIsHold(invoice.id!!)
 
+        // 2. 결제 시도 생성 (트랜잭션)
+        paymentAttemptService.createPaymentAttempt(
+            invoice.id!!,
+            at
+        )
+
         // todo 실패 시 hold했던 것들 풀어주고
-        val confirmResult = paymentFacade.confirmPrepayment(
-            invoice.id!!, PrepaymentView.ConfirmPrepaymentCommand(
+        // 3. PG사 결제 요청 (트랜잭션 없음)
+        val confirmResult = paymentFacade.requestConfirmPrepaymentToPg(
+            PrepaymentView.ConfirmPrepaymentCommand(
                 paymentSystem,
                 pgTransactionKey,
                 invoice.externalOrderKey,
                 invoice.paidAmount,
-            ), at
+            )
         )
 
         try {
+            // 4. 성공 처리 (트랜잭션)
             paymentFacade.successPrepayment(confirmResult)
         } catch (e: Exception) {
             // 실패 시 스케줄러/콜백이 보정함

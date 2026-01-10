@@ -55,9 +55,14 @@ class SubscriptionPaymentFacade(
         val paymentSystem = billingKey.paymentSystem
         // todo try catch or retry해야한다. 연체..
 
-        val confirmResult = paymentFacade.confirmBilling(
+        // 1. 결제 시도 생성 (트랜잭션)
+        paymentAttemptService.createPaymentAttempt(
             invoice.id!!,
-            at,
+            at
+        )
+
+        // 2. PG사 결제 요청 (트랜잭션 없음)
+        val confirmResult = paymentFacade.requestConfirmBillingToPg(
             BillingView.ConfirmBillingCommand(
                 billingKey.billingKey,
                 customer.id!!,
@@ -71,6 +76,7 @@ class SubscriptionPaymentFacade(
         )
 
         try {
+            // 3. 성공 처리 (트랜잭션)
             paymentFacade.successBilling(
                 confirmResult
             )

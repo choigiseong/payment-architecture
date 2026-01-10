@@ -46,16 +46,9 @@ class PaymentFacade(
         )
     }
 
-    fun confirmBilling(
-        invoiceSeq: Long,
-        requestedAt: Instant,
+    fun requestConfirmBillingToPg(
         confirmBillingCommand: BillingView.ConfirmBillingCommand
     ): BillingView.ConfirmResult {
-        paymentAttemptService.createPaymentAttempt(
-            invoiceSeq,
-            requestedAt
-        )
-
         val strategy = strategyManager.billingPaymentResolve(confirmBillingCommand.paymentSystem)
         return strategy.confirmBilling(
             confirmBillingCommand
@@ -91,16 +84,9 @@ class PaymentFacade(
         invoiceService.handleRetryOrFinalFailed(invoiceSeq, at)
     }
 
-    fun confirmPrepayment(
-        invoiceSeq: Long,
+    fun requestConfirmPrepaymentToPg(
         command: PrepaymentView.ConfirmPrepaymentCommand,
-        at: Instant
     ): PrepaymentView.ConfirmResult {
-        paymentAttemptService.createPaymentAttempt(
-            invoiceSeq,
-            at
-        )
-
         val strategy = strategyManager.prepaymentPaymentResolve(command.paymentSystem)
         return strategy.confirmPrepayment(command)
     }
