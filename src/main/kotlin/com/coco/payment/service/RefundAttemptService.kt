@@ -29,6 +29,7 @@ class RefundAttemptService(
 
     }
 
+    //todo 상태 확인
     fun sumSuccessAmountByInvoice(invoiceSeq: Long): Long {
         return refundAttemptRepository.sumSuccessAmountByInvoice(invoiceSeq, RefundAttemptStatus.PENDING)
     }

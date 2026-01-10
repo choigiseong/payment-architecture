@@ -1,9 +1,15 @@
 package com.coco.payment.service.strategy
 
+import com.coco.payment.persistence.enumerator.DiscountType
 import com.coco.payment.persistence.enumerator.PaymentSystem
+import com.coco.payment.service.CouponService
+import com.coco.payment.service.InvoiceDiscountService
 import com.coco.payment.service.InvoiceService
 import com.coco.payment.service.PaymentAttemptService
+import com.coco.payment.service.PointService
+import com.coco.payment.service.RefundAttemptService
 import com.coco.payment.service.TossPaymentService
+import com.coco.payment.service.dto.BillingView
 import com.coco.payment.service.dto.PrepaymentView
 import jakarta.transaction.Transactional
 import org.springframework.stereotype.Service
@@ -13,6 +19,10 @@ class TossPrepaymentStrategy(
     private val tossPaymentService: TossPaymentService,
     private val invoiceService: InvoiceService,
     private val paymentAttemptService: PaymentAttemptService,
+    private val refundAttemptService: RefundAttemptService,
+    private val invoiceDiscountService: InvoiceDiscountService,
+    private val couponService: CouponService,
+    private val pointService: PointService
 ) : PrepaymentStrategy {
     override fun supports(paymentSystem: PaymentSystem): Boolean = paymentSystem == PaymentSystem.TOSS
     override fun confirmPrepayment(command: PrepaymentView.ConfirmPrepaymentCommand): PrepaymentView.ConfirmResult {
@@ -37,6 +47,50 @@ class TossPrepaymentStrategy(
             invoice.id!!,
             confirmResult.approvedAt,
         )
+    }
+
+    @Transactional
+    override fun onSuccessRefundPrepayment(refundResult: BillingView.RefundResult, refundAmount: Long) {
+        if (refundResult !is BillingView.RefundResult.TossRefundResult) {
+            throw IllegalArgumentException("Provider response is not TossRefundResult")
+        }
+
+        val invoice = invoiceService.findByExternalOrderKey(refundResult.orderId)
+        val lastCanceledInfo = refundResult.getLastCanceledInfo()
+
+        refundAttemptService.succeeded(
+            invoice.id!!,
+            lastCanceledInfo.canceledAt,
+            lastCanceledInfo.transactionKey
+        )
+
+        val isFullRefund = (refundAmount == invoice.paidAmount)
+
+        if (isFullRefund) {
+            invoiceService.refunded(invoice.id!!)
+        } else {
+            // 부분 환불 처리
+            invoiceService.partiallyRefunded(invoice.id!!)
+
+            // 쿠폰 부분 환불 처리 (쿠폰 금액 비율에 따라 계산)
+            val refundRatio = refundAmount.toDouble() / invoice.paidAmount.toDouble()
+            val invoiceDiscounts = invoiceDiscountService.findByInvoiceSeq(invoice.id!!)
+
+            for (discount in invoiceDiscounts) {
+                val refundDiscountAmount = (discount.amount * refundRatio).toLong()
+                when (discount.type) {
+                    DiscountType.COUPON -> {
+                        // 쿠폰 부분 환불 처리
+                        // couponService.refundCoupon(discount.refSeq!!, refundDiscountAmount)
+                    }
+
+                    DiscountType.POINT -> {
+                        // 포인트 환불 처리
+                        // pointService.refundPoint(discount.refSeq!!, refundDiscountAmount)
+                    }
+                }
+            }
+        }
     }
 
 }

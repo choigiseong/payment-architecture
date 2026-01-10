@@ -121,4 +121,9 @@ class PaymentFacade(
         strategy.onSuccessPrepayment(confirmResult)
     }
 
+    fun successRefundPrepayment(refundResult: BillingView.RefundResult, refundAmount: Long) {
+        val strategy = strategyManager.prepaymentPaymentResolve(refundResult.paymentSystem)
+        strategy.onSuccessRefundPrepayment(refundResult, refundAmount)
+    }
+
 }

@@ -7,7 +7,10 @@ import com.coco.payment.persistence.model.Invoice
 import com.coco.payment.service.CouponService
 import com.coco.payment.service.InvoiceDiscountService
 import com.coco.payment.service.InvoiceService
+import com.coco.payment.service.PaymentAttemptService
 import com.coco.payment.service.PointService
+import com.coco.payment.service.RefundAttemptService
+import com.coco.payment.service.dto.BillingView
 import com.coco.payment.service.dto.PrepaymentView
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -20,7 +23,9 @@ class PrepaymentFacade(
     private val pointService: PointService,
     private val invoiceService: InvoiceService,
     private val invoiceDiscountService: InvoiceDiscountService,
-    private val paymentFacade: PaymentFacade
+    private val paymentFacade: PaymentFacade,
+    private val refundAttemptService: RefundAttemptService,
+    private val paymentAttemptService: PaymentAttemptService
 ) {
 
     // 인증 단계 메소드 작성
@@ -102,7 +107,6 @@ class PrepaymentFacade(
     }
 
 
-
     // todo 선결제 환불
     // 환불 시 배송비는 제외해야함
     // 부분환불 시 쿠폰은 item단위로
@@ -116,7 +120,7 @@ class PrepaymentFacade(
 
         // 여기도 그게 있을텐데, 연속 차단. 왜냐면 아래 행위가 이상하거든. 동시성으로 말이자
         // 이미 환불된 금액 조회
-        val alreadyRefunded = refundService.getTotalRefundedAmount(invoiceId)
+        val alreadyRefunded = refundAttemptService.sumSuccessAmountByInvoice(invoiceId)
         val refundableAmount = invoice.paidAmount - alreadyRefunded
 
         // 환불 가능 금액 검증
@@ -126,12 +130,11 @@ class PrepaymentFacade(
         }
 
         // 환불 처리
-        val isFullRefund = (refundAmount == invoice.paidAmount)
         val refundResult = paymentFacade.refund(
-            invoiceId = invoiceId,
+            invoiceSeq = invoiceId,
             at = at,
             command = BillingView.RefundBillingCommand(
-                pgTransactionKey = invoice.pgTransactionKey!!,
+                originalTransactionKey = invoice.pgTransactionKey!!,
                 paymentSystem = invoice.paymentSystem,
                 amount = refundAmount,
                 reason = reason
@@ -139,41 +142,7 @@ class PrepaymentFacade(
         )
 
         try {
-            // 환불 성공 시 내부 상태 업데이트
-            if (isFullRefund) {
-                invoiceService.refunded(invoiceId, at)
-            } else {
-                // 부분 환불 처리
-                invoiceService.partiallyRefunded(invoiceId, at)
-
-                // 쿠폰 부분 환불 처리 (쿠폰 금액 비율에 따라 계산)
-                val refundRatio = refundAmount.toDouble() / invoice.paidAmount.toDouble()
-                val invoiceDiscounts = invoiceDiscountService.findByInvoiceSeq(invoiceId)
-
-                for (discount in invoiceDiscounts) {
-                    val refundDiscountAmount = (discount.amount * refundRatio).toLong()
-                    when (discount.type) {
-                        DiscountType.COUPON -> {
-                            // 쿠폰 부분 환불 처리
-                            couponService.refundCoupon(discount.refSeq!!, refundDiscountAmount)
-                        }
-                        DiscountType.POINT -> {
-                            // 포인트 환불 처리
-                            pointService.refundPoint(discount.refSeq!!, refundDiscountAmount)
-                        }
-                    }
-                }
-            }
-
-            // 환불 내역 저장
-            refundService.createRefund(
-                invoiceId = invoiceId,
-                paymentAttemptId = paymentAttempt.id, // 마지막 결제 시도 ID
-                amount = refundAmount,
-                reason = reason,
-                at = at
-            )
-
+            paymentFacade.successRefundPrepayment(refundResult, refundAmount)
         } catch (e: Exception) {
             // 환불 실패 시 로깅 및 예외 처리
             // 스케줄러/콜백을 통한 재시도 로직 필요
