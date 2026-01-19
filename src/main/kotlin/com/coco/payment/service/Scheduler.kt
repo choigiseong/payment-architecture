@@ -16,7 +16,7 @@ class Scheduler(
     private val paymentAttemptService: PaymentAttemptService,
 ) {
 
-    @Scheduled
+    @Scheduled(fixedDelay = 60000) // 1분마다 실행
     fun recoverPendingPayments() {
         val now = Instant.now()
         val paymentAttempts = paymentAttemptService.findPendingPaymentAttempts(now)

@@ -71,7 +71,8 @@ class PaymentFacade(
             invoiceSeq = invoiceSeq,
             requestAmount = command.amount,
             reason = command.reason,
-            at = at
+            at = at,
+            refundItems = emptyList()
         )
 
         val strategy = strategyManager.billingPaymentResolve(command.paymentSystem)
