@@ -123,14 +123,16 @@ class PaymentFacade(
     fun refundPrepayment(
         invoiceSeq: Long,
         at: Instant,
-        command: PrepaymentView.RefundPrepaymentCommand
+        command: PrepaymentView.RefundPrepaymentCommand,
+        claimSeq: Long? = null
     ): PrepaymentView.RefundResult {
         refundAttemptService.createAttemptIfRefundable(
             invoiceSeq = invoiceSeq,
             requestAmount = command.amount,
             reason = command.reason,
             at = at,
-            refundItems = command.refundItems
+            refundItems = command.refundItems,
+            claimSeq = claimSeq
         )
 
         val strategy = strategyManager.prepaymentPaymentResolve(command.paymentSystem)

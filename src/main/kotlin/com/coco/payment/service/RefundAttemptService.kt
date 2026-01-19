@@ -24,7 +24,8 @@ class RefundAttemptService(
         requestAmount: Long,
         reason: String,
         at: Instant,
-        refundItems: List<PrepaymentView.RefundItemCommand>
+        refundItems: List<PrepaymentView.RefundItemCommand>,
+        claimSeq: Long? = null
     ) {
         // 비관적 락을 걸어 동시성 제어
         val invoice = invoiceRepository.findByIdWithLock(invoiceSeq)
@@ -43,6 +44,7 @@ class RefundAttemptService(
                 amount = requestAmount,
                 reason = reason,
                 requestedAt = at,
+                claimSeq = claimSeq
             )
         )
 

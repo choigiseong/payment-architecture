@@ -43,5 +43,7 @@ class RefundAttempt(
     @Column(nullable = true)
     var failureReason: String? = null,
     @Column(nullable = false)
-    var createdAt: Instant = Instant.now()
+    var createdAt: Instant = Instant.now(),
+    @Column(nullable = true)
+    var claimSeq: Long? = null
 )

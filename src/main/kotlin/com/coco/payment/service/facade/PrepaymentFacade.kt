@@ -118,7 +118,8 @@ class PrepaymentFacade(
         refundAmount: Long,
         reason: String,
         at: Instant,
-        refundItems: List<PrepaymentView.RefundItemCommand>
+        refundItems: List<PrepaymentView.RefundItemCommand>,
+        claimSeq: Long? = null
     ) {
         val invoice = invoiceService.findById(invoiceId)
 
@@ -132,7 +133,8 @@ class PrepaymentFacade(
                 amount = refundAmount,
                 reason = reason,
                 refundItems = refundItems
-            )
+            ),
+            claimSeq = claimSeq
         )
 
         try {

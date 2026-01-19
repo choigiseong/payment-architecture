@@ -1,8 +1,10 @@
 package com.coco.payment.scheduler
 
 import com.coco.payment.persistence.enumerator.ClaimStatus
+import com.coco.payment.persistence.enumerator.RefundAttemptStatus
 import com.coco.payment.persistence.repository.ClaimItemRepository
 import com.coco.payment.persistence.repository.ClaimRepository
+import com.coco.payment.persistence.repository.RefundAttemptRepository
 import com.coco.payment.service.ClaimService
 import com.coco.payment.service.InvoiceService
 import com.coco.payment.service.dto.PrepaymentView
@@ -20,7 +22,8 @@ class ClaimRefundScheduler(
     private val claimItemRepository: ClaimItemRepository,
     private val prepaymentFacade: PrepaymentFacade,
     private val invoiceService: InvoiceService,
-    private val claimService: ClaimService
+    private val claimService: ClaimService,
+    private val refundAttemptRepository: RefundAttemptRepository
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -48,7 +51,6 @@ class ClaimRefundScheduler(
         }
     }
 
-    // todo claimService.succeedRefund(claimId) 따로 처리
     fun processRefund(claimId: Long) {
         val claim = claimRepository.findById(claimId).get() // 위에서 상태를 변경했으므로 반드시 존재
 
@@ -64,26 +66,39 @@ class ClaimRefundScheduler(
         val invoice = invoiceService.findByOrderSeq(claim.orderSeq)
             ?: throw IllegalStateException("Invoice not found for order: ${claim.orderSeq}")
 
+        // 1. 환불 로직 수행 (PG 취소 및 내부 데이터 업데이트)
+        // 성공 시 이벤트가 발행되어 상태가 변경됨
         prepaymentFacade.refundPrepayment(
             invoiceId = invoice.id!!,
             refundAmount = totalRefundAmount,
             reason = claim.reason,
             at = Instant.now(),
-            refundItems = refundItems
+            refundItems = refundItems,
+            claimSeq = claimId // 클레임 ID 전달
         )
-
-        claimService.succeedRefund(claimId)
     }
 
     @Scheduled(fixedDelay = 300000) // 5분마다 실행
-    fun monitorStuckRefunds() {
+    fun recoverStuckRefunds() {
         val stuckTime = Instant.now().minus(Duration.ofMinutes(5))
         val stuckClaims = claimRepository.findByStatusAndUpdatedAtBefore(ClaimStatus.REFUND_PROCESSING, stuckTime)
 
-        if (stuckClaims.isNotEmpty()) {
-            val stuckClaimIds = stuckClaims.map { it.id }
-            // TODO: 실제 알림 시스템 연동 (Slack, Email, SMS 등)
-            log.error("!!! REFUND-STUCK-ALERT: Claims are stuck in REFUND_PROCESSING state for over 5 minutes. Claim IDs: $stuckClaimIds")
+        for (claim in stuckClaims) {
+            try {
+                // 환불 시도가 성공했는지 확인
+                val isRefunded = refundAttemptRepository.existsByClaimSeqAndStatus(claim.id!!, RefundAttemptStatus.SUCCEEDED)
+                
+                if (isRefunded) {
+                    log.info("Recovering stuck claim: ${claim.id}. Refund was successful, updating status.")
+                    claimService.succeedRefund(claim.id!!)
+                } else {
+                    // 환불 시도가 없거나 실패했다면? -> 다시 COMPLETED로 돌려서 재시도하게 할 수도 있고, 알림을 보낼 수도 있음.
+                    // 여기서는 알림만 보냄
+                    log.error("!!! REFUND-STUCK-ALERT: Claim ${claim.id} is stuck in REFUND_PROCESSING but no successful refund attempt found.")
+                }
+            } catch (e: Exception) {
+                log.error("Error recovering stuck claim: ${claim.id}", e)
+            }
         }
     }
 }

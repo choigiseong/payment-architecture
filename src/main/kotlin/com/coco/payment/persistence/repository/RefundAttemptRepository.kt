@@ -40,4 +40,6 @@ interface RefundAttemptRepository : JpaRepository<RefundAttempt, Long> {
     ): Long
 
     fun findByPgTransactionKey(pgTransactionKey: String): RefundAttempt?
+
+    fun existsByClaimSeqAndStatus(claimSeq: Long, status: RefundAttemptStatus): Boolean
 }

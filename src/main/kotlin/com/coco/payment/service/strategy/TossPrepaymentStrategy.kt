@@ -11,7 +11,9 @@ import com.coco.payment.service.PointService
 import com.coco.payment.service.RefundAttemptService
 import com.coco.payment.service.TossPaymentService
 import com.coco.payment.service.dto.PrepaymentView
+import com.coco.payment.service.event.RefundSuccessEvent
 import jakarta.transaction.Transactional
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 
 @Service
@@ -23,7 +25,8 @@ class TossPrepaymentStrategy(
     private val invoiceDiscountService: InvoiceDiscountService,
     private val couponService: CouponService,
     private val pointService: PointService,
-    private val orderService: OrderService
+    private val orderService: OrderService,
+    private val eventPublisher: ApplicationEventPublisher
 ) : PrepaymentStrategy {
     override fun supports(paymentSystem: PaymentSystem): Boolean = paymentSystem == PaymentSystem.TOSS
     override fun confirmPrepayment(command: PrepaymentView.ConfirmPrepaymentCommand): PrepaymentView.ConfirmResult {
@@ -102,6 +105,11 @@ class TossPrepaymentStrategy(
                     }
                 }
             }
+        }
+
+        // 클레임 ID가 있다면 이벤트 발행
+        if (refundAttempt.claimSeq != null) {
+            eventPublisher.publishEvent(RefundSuccessEvent(refundAttempt.claimSeq!!))
         }
     }
 
