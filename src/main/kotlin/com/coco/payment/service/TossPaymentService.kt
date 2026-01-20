@@ -145,30 +145,35 @@ class TossPaymentService(
         }
     }
 
-    fun confirmPrepayment(command: PrepaymentView.ConfirmPrepaymentCommand): PrepaymentView.ConfirmResult {
-
-        val response = tossPaymentClient.confirmPrepayment(
-            TossPaymentView.TossConfirmPrepaymentRequest(
-                command.pgTransactionKey,
-                command.externalOrderKey,
-                command.amount
+    fun confirmPrepayment(command: PrepaymentView.ConfirmPrepaymentCommand): PgResult<PrepaymentView.ConfirmResult> {
+        return try {
+            val response = tossPaymentClient.confirmPrepayment(
+                TossPaymentView.TossConfirmPrepaymentRequest(
+                    command.pgTransactionKey,
+                    command.externalOrderKey,
+                    command.amount
+                )
             )
-        )
 
-        return PrepaymentView.ConfirmResult.TossConfirmResult(
-            PaymentSystem.TOSS,
-            response.paymentKey,
-            response.type,
-            response.mId,
-            response.lastTransactionKey,
-            response.orderId,
-            response.totalAmount,
-            response.balanceAmount,
-            response.status,
-            response.requestedAt,
-            response.approvedAt,
-            response.taxFreeAmount
-        )
+            PgResult.Success(
+                PrepaymentView.ConfirmResult.TossConfirmResult(
+                    PaymentSystem.TOSS,
+                    response.paymentKey,
+                    response.type,
+                    response.mId,
+                    response.lastTransactionKey,
+                    response.orderId,
+                    response.totalAmount,
+                    response.balanceAmount,
+                    response.status,
+                    response.requestedAt,
+                    response.approvedAt,
+                    response.taxFreeAmount
+                )
+            )
+        } catch (e: TossApiException) {
+            tossErrorResolver.confirmErrorResolver(e.status, e.code)
+        }
     }
 
     fun cancelPrepayment(

@@ -105,7 +105,7 @@ class PaymentFacade(
         invoiceSeq: Long,
         command: PrepaymentView.ConfirmPrepaymentCommand,
         at: Instant
-    ): PrepaymentView.ConfirmResult {
+    ): PgResult<PrepaymentView.ConfirmResult> {
         paymentAttemptService.createPaymentAttempt(
             invoiceSeq,
             at

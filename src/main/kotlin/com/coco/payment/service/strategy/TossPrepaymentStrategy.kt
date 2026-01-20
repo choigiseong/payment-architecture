@@ -1,5 +1,6 @@
 package com.coco.payment.service.strategy
 
+import com.coco.payment.handler.paymentgateway.dto.PgResult
 import com.coco.payment.persistence.enumerator.DiscountType
 import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.service.CouponService
@@ -29,7 +30,7 @@ class TossPrepaymentStrategy(
     private val eventPublisher: ApplicationEventPublisher
 ) : PrepaymentStrategy {
     override fun supports(paymentSystem: PaymentSystem): Boolean = paymentSystem == PaymentSystem.TOSS
-    override fun confirmPrepayment(command: PrepaymentView.ConfirmPrepaymentCommand): PrepaymentView.ConfirmResult {
+    override fun confirmPrepayment(command: PrepaymentView.ConfirmPrepaymentCommand): PgResult<PrepaymentView.ConfirmResult> {
         return tossPaymentService.confirmPrepayment(command)
     }
 

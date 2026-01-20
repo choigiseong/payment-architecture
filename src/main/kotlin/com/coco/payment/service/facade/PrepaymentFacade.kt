@@ -1,5 +1,7 @@
 package com.coco.payment.service.facade
 
+import com.coco.payment.handler.paymentgateway.dto.PgError
+import com.coco.payment.handler.paymentgateway.dto.PgResult
 import com.coco.payment.persistence.enumerator.DiscountType
 import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.persistence.model.Customer
@@ -12,6 +14,7 @@ import com.coco.payment.service.PointService
 import com.coco.payment.service.RefundAttemptService
 import com.coco.payment.service.dto.BillingView
 import com.coco.payment.service.dto.PrepaymentView
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -27,6 +30,7 @@ class PrepaymentFacade(
     private val refundAttemptService: RefundAttemptService,
     private val paymentAttemptService: PaymentAttemptService
 ) {
+    private val log = LoggerFactory.getLogger(javaClass)
 
     // 인증 단계 메소드 작성
     // 쿠폰, 포인트에 대한 검증
@@ -34,6 +38,7 @@ class PrepaymentFacade(
     // 인증안하고 브라우저 닫을 수도 있으니, 스케줄러로 시간 지나면 닫아야함. 승인때 검증 실패로 유도해야함
     // 인증 단계: 사전 검증 후 인보이스/할인(Hold) 생성
 
+    // todo 여기서 중복 차단
     @Transactional
     fun authorizePrepayment(
         customer: Customer,
@@ -89,7 +94,7 @@ class PrepaymentFacade(
         invoiceDiscountService.checkDiscountIsHold(invoice.id!!)
 
         // 2. 결제 시도 생성 및 PG 요청 (PaymentFacade 내부에서 처리)
-        val confirmResult = paymentFacade.confirmPrepayment(
+        val pgResult = paymentFacade.confirmPrepayment(
             invoice.id!!,
             PrepaymentView.ConfirmPrepaymentCommand(
                 paymentSystem,
@@ -100,13 +105,44 @@ class PrepaymentFacade(
             at
         )
 
+        when (pgResult) {
+            is PgResult.Success -> handleConfirmSuccess(invoice.id!!, pgResult.value)
+            is PgResult.Fail -> handleConfirmFail(invoice.id!!, at, pgResult.error)
+            is PgResult.Retryable -> {
+                // 재시도 가능한 오류는 스케줄러가 처리하도록 둡니다. (별도 처리 없음)
+            }
+            is PgResult.Critical -> handleConfirmCritical(invoice.id!!, at, pgResult.error)
+        }
+    }
+
+    private fun handleConfirmSuccess(invoiceId: Long, confirmResult: PrepaymentView.ConfirmResult) {
         try {
-            // 3. 성공 처리 (트랜잭션)
             paymentFacade.successPrepayment(confirmResult)
         } catch (e: Exception) {
-            // 실패 시 스케줄러/콜백이 보정함
-//            log.error("Payment successful but business logic failed for invoice: ${invoice.id}", e)
+            log.error("Payment successful but business logic failed for invoice: $invoiceId. This will be recovered by scheduler.", e)
         }
+    }
+
+    private fun handleConfirmFail(invoiceId: Long, at: Instant, pgError: PgError) {
+        val errorMessage = pgError.message
+        try {
+            paymentFacade.failPayment(invoiceId, at, errorMessage)
+        } catch (e: Exception) {
+            log.error("Failed to update payment status to FAIL for invoice: $invoiceId after PG failure. This will be recovered by scheduler.", e)
+        }
+        throw IllegalStateException("결제 승인에 실패했습니다: $errorMessage")
+    }
+
+    private fun handleConfirmCritical(invoiceId: Long, at: Instant, pgError: PgError) {
+        val errorMessage = pgError.message
+        try {
+            paymentFacade.failPayment(invoiceId, at, errorMessage)
+        } catch (e: Exception) {
+            log.error("Failed to update payment status to CRITICAL for invoice: $invoiceId after PG critical failure. This will be recovered by scheduler.", e)
+        }
+        // alarmService.notify(pgError) // PgError 객체를 직접 전달
+        log.error("CRITICAL PAYMENT ERROR for invoice $invoiceId: $errorMessage")
+        throw IllegalStateException("결제 승인 중 치명적인 오류가 발생했습니다: $errorMessage")
     }
 
 
