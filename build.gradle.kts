@@ -1,7 +1,6 @@
 plugins {
 	kotlin("jvm") version "1.9.25"
 	kotlin("plugin.spring") version "1.9.25"
-	kotlin("plugin.jpa") version "1.9.25"
 	id("org.springframework.boot") version "3.2.6"
 	id("io.spring.dependency-management") version "1.1.7"
 }
@@ -19,25 +18,12 @@ java {
 repositories {
 	mavenCentral()
 }
-extra["springCloudVersion"] = "2023.0.3"
-dependencyManagement {
-    imports {
-        mavenBom("org.springframework.cloud:spring-cloud-dependencies:${property("springCloudVersion")}")
-    }
-}
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
-	implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
 	implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation ("org.springframework.cloud:spring-cloud-starter-openfeign")
-    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-    
-    // Swagger (SpringDoc)
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0")
-    implementation("io.swagger.core.v3:swagger-models:2.2.21")
-    implementation("io.swagger.core.v3:swagger-annotations:2.2.21")
+    implementation("org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.3")
 
     runtimeOnly("com.h2database:h2")
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
