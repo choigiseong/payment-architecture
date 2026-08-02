@@ -2,6 +2,7 @@ package com.coco.payment.persistence.model
 
 import java.time.Instant
 import org.apache.ibatis.type.Alias
+import com.coco.payment.persistence.enumerator.PaymentTransactionStatus
 
 @Alias("payment_transaction")
 data class PaymentTransaction(
@@ -10,7 +11,7 @@ data class PaymentTransaction(
     val moid: String,
     val tid: String?,
     val amount: Long,
-    val status: String,
+    val status: PaymentTransactionStatus,
     var createdAt: Instant?,
     var updatedAt: Instant?,
 )

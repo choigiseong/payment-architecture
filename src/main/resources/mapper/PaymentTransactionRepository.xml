@@ -23,4 +23,12 @@
         FROM payment_transaction AS r
         WHERE r.id = #{id}
     </select>
+
+    <update id="mark">
+        UPDATE payment_transaction
+        SET tid = #{tid},
+            status = #{toStatus}
+        WHERE id = #{id}
+          AND status = #{fromStatus}
+    </update>
 </mapper>

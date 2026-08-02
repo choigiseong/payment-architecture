@@ -5,14 +5,15 @@
         r.id AS id,
         r.company_seq AS companySeq,
         r.total_price AS totalPrice,
+        r.status AS status,
         r.created_at AS createdAt,
         r.updated_at AS updatedAt
     </sql>
 
     <insert id="insert" parameterType="com.coco.payment.persistence.model.Order"
             useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO "order" (company_seq, total_price)
-        VALUES (#{companySeq}, #{totalPrice})
+        INSERT INTO "order" (company_seq, total_price, status)
+        VALUES (#{companySeq}, #{totalPrice}, #{status})
     </insert>
 
     <select id="findById" resultType="order">
@@ -20,4 +21,10 @@
         FROM "order" AS r
         WHERE r.id = #{id}
     </select>
+
+    <update id="updateStatus">
+        UPDATE "order"
+        SET status = #{status}
+        WHERE id = #{id}
+    </update>
 </mapper>
