@@ -4,7 +4,7 @@ import org.mybatis.spring.annotation.MapperScan
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 
-@MapperScan("com.coco.payment.persistence.mapper")
+@MapperScan("com.coco.payment.persistence.repository")
 @SpringBootApplication
 class PaymentApplication
 

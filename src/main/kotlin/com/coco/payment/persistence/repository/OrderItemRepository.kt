@@ -1,9 +1,9 @@
-package com.coco.payment.persistence.mapper
+package com.coco.payment.persistence.repository
 
 import com.coco.payment.persistence.model.OrderItem
 import org.apache.ibatis.annotations.Param
 
-interface OrderItemMapper {
+interface OrderItemRepository {
     fun insert(orderItem: OrderItem): Int
 
     fun findById(@Param("id") id: Long): OrderItem?
