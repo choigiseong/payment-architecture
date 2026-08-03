@@ -5,6 +5,7 @@ import com.coco.payment.persistence.model.Order
 import com.coco.payment.persistence.model.OrderItem
 import com.coco.payment.persistence.repository.OrderItemRepository
 import com.coco.payment.persistence.repository.OrderRepository
+import com.coco.payment.service.dto.BillingOrderItem
 import org.springframework.stereotype.Service
 
 @Service
@@ -24,5 +25,3 @@ class OrderService(private val orderRepository: OrderRepository, private val ord
         check(orderRepository.updateStatus(orderId, OrderStatus.PAID) == 1) { "Failed to mark order as paid" }
     }
 }
-
-data class BillingOrderItem(val itemName: String, val unitPrice: Long, val quantity: Int)
