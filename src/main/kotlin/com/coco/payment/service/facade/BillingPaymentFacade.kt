@@ -18,6 +18,7 @@ class BillingPaymentFacade(
         val result = tossBillingPaymentHandler.approve(
             TossBillingPaymentCommand(prepared.billingKey, prepared.customerKey, prepared.moid, prepared.orderName, prepared.amount)
         )
+        // 실패 가능. 망취소 or 콜백&폴링
         billingPaymentService.complete(prepared, result)
         return result
     }
