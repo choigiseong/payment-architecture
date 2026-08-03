@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service
 @Service
 class BillingPaymentFacade(
     private val billingPaymentService: BillingPaymentService,
+    // 추후 pg 확장 가능하게 분리
     private val tossBillingPaymentHandler: TossBillingPaymentHandler,
 ) {
     fun pay(command: BillingPaymentCommand): BillingPaymentResult {
