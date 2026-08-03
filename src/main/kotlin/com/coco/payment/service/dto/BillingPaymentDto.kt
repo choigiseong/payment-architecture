@@ -24,6 +24,19 @@ data class BillingPaymentResult(
     val amount: Long,
 )
 
+sealed interface PaymentResult<out T> {
+    data class Success<T>(val value: T) : PaymentResult<T>
+
+    data class Failure(val error: PaymentError) : PaymentResult<Nothing>
+
+    data class Unknown(val error: PaymentError) : PaymentResult<Nothing>
+
+    data class PaymentError(
+        val code: String?,
+        val message: String,
+    )
+}
+
 data class BillingOrderItem(
     val itemName: String,
     val unitPrice: Long,

@@ -5,6 +5,7 @@ import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingPaymentComman
 import com.coco.payment.service.BillingPaymentService
 import com.coco.payment.service.dto.BillingPaymentCommand
 import com.coco.payment.service.dto.BillingPaymentResult
+import com.coco.payment.service.dto.PaymentResult
 import org.springframework.stereotype.Service
 
 @Service
@@ -13,13 +14,19 @@ class BillingPaymentFacade(
     // 추후 pg 확장 가능하게 분리
     private val tossBillingPaymentHandler: TossBillingPaymentHandler,
 ) {
-    fun pay(command: BillingPaymentCommand): BillingPaymentResult {
+    fun pay(command: BillingPaymentCommand): PaymentResult<BillingPaymentResult> {
         val prepared = billingPaymentService.prepare(command)
         val result = tossBillingPaymentHandler.approve(
             TossBillingPaymentCommand(prepared.billingKey, prepared.customerKey, prepared.moid, prepared.orderName, prepared.amount)
         )
-        // 실패 가능. 망취소 or 콜백&폴링
-        billingPaymentService.complete(prepared, result)
-        return result
+        return when (result) {
+            is PaymentResult.Success -> {
+                // 실패 가능. 망취소 or 콜백&폴링
+                billingPaymentService.complete(prepared, result.value)
+                result
+            }
+            is PaymentResult.Failure -> result
+            is PaymentResult.Unknown -> result
+        }
     }
 }

@@ -2,11 +2,12 @@ package com.coco.payment.handler.paymentgateway.toss
 
 import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingPaymentCommand
 import com.coco.payment.service.dto.BillingPaymentResult
+import com.coco.payment.service.dto.PaymentResult
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.http.HttpStatusCode
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
+import org.springframework.web.client.RestClientException
 
 @Component
 class TossBillingPaymentHandler(
@@ -14,42 +15,44 @@ class TossBillingPaymentHandler(
     @Value("\${payment.toss.secret-key}")
     private val secretKey: String,
 ) {
-    fun approve(command: TossBillingPaymentCommand): BillingPaymentResult {
+    fun approve(command: TossBillingPaymentCommand): PaymentResult<BillingPaymentResult> {
         require(secretKey.isNotBlank()) { "TOSS_SECRET_KEY must be configured" }
 
-        val response = tossRestClient.post()
-            .uri("/v1/billing/{billingKey}", command.billingKey)
-            .headers { headers -> headers.setBasicAuth(secretKey, "") }
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(
-                TossBillingPaymentRequest(
-                    customerKey = command.customerKey,
-                    orderId = command.moid,
-                    orderName = command.orderName,
-                    amount = command.amount,
+        return try {
+            val response = tossRestClient.post()
+                .uri("/v1/billing/{billingKey}", command.billingKey)
+                .headers { headers -> headers.setBasicAuth(secretKey, "") }
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(
+                    TossBillingPaymentRequest(
+                        customerKey = command.customerKey,
+                        orderId = command.moid,
+                        orderName = command.orderName,
+                        amount = command.amount,
+                    )
                 )
-            )
-            .retrieve()
-            .onStatus({ status -> status.isError }) { _, clientResponse ->
-                val error = clientResponse.body(TossErrorResponse::class.java)
-                throw TossPaymentException(
-                    status = clientResponse.statusCode,
-                    code = error?.code,
-                    message = error?.message ?: "Toss billing payment failed",
-                )
-            }
-            .body(TossBillingPaymentResponse::class.java)
-            ?: throw TossPaymentException(
-                status = null,
-                code = null,
-                message = "Toss billing payment response is empty",
-            )
+                .retrieve()
+                .onStatus({ status -> status.isError }) { _, clientResponse ->
+                    throw TossPaymentException(
+                        code = clientResponse.statusCode.value().toString(),
+                        message = "Toss billing payment failed: ${clientResponse.statusCode}",
+                    )
+                }
+                .body(TossBillingPaymentResponse::class.java)
+                ?: return PaymentResult.Unknown(PaymentResult.PaymentError(null, "Toss billing payment response is empty"))
 
-        return BillingPaymentResult(
-            tid = response.paymentKey,
-            moid = response.orderId,
-            amount = response.totalAmount,
-        )
+            PaymentResult.Success(
+                BillingPaymentResult(
+                    tid = response.paymentKey,
+                    moid = response.orderId,
+                    amount = response.totalAmount,
+                )
+            )
+        } catch (exception: TossPaymentException) {
+            PaymentResult.Failure(PaymentResult.PaymentError(exception.code, exception.message ?: "Toss billing payment failed"))
+        } catch (exception: RestClientException) {
+            PaymentResult.Unknown(PaymentResult.PaymentError(null, exception.message ?: "Toss billing payment request failed"))
+        }
     }
 }
 
@@ -67,13 +70,7 @@ private data class TossBillingPaymentResponse(
     val status: String,
 )
 
-private data class TossErrorResponse(
-    val code: String?,
-    val message: String?,
-)
-
-class TossPaymentException(
-    val status: HttpStatusCode?,
+private class TossPaymentException(
     val code: String?,
     message: String,
 ) : RuntimeException(message)
