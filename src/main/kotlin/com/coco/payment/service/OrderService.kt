@@ -7,6 +7,7 @@ import com.coco.payment.persistence.repository.OrderItemRepository
 import com.coco.payment.persistence.repository.OrderRepository
 import com.coco.payment.service.dto.BillingOrderItem
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 @Service
 class OrderService(private val orderRepository: OrderRepository, private val orderItemRepository: OrderItemRepository) {
@@ -24,10 +25,12 @@ class OrderService(private val orderRepository: OrderRepository, private val ord
         return order.id!!
     }
 
+    @Transactional
     fun markPaid(orderId: Long) {
         check(orderRepository.mark(orderId, OrderStatus.PENDING_PAYMENT, OrderStatus.PAID) == 1) { "Failed to mark order as paid" }
     }
 
+    @Transactional
     fun markPaymentFailed(orderId: Long) {
         check(orderRepository.mark(orderId, OrderStatus.PENDING_PAYMENT, OrderStatus.PAYMENT_FAILED) == 1) { "Failed to mark order as failed" }
     }

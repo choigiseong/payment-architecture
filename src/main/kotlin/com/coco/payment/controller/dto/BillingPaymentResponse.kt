@@ -12,7 +12,19 @@ data class BillingPaymentResponse(
     val tid: String?,
     val code: String?,
     val message: String?,
-)
+) {
+    companion object {
+        fun of(result: BillingPaymentResult) = BillingPaymentResponse(
+            result.orderKey,
+            result.paymentKey,
+            result.orderStatus,
+            result.paymentStatus,
+            result.tid,
+            result.code,
+            result.message,
+        )
+    }
+}
 
 data class PaymentPollingResponse(
     val orderKey: String,
@@ -20,7 +32,14 @@ data class PaymentPollingResponse(
     val orderStatus: OrderStatus,
     val paymentStatus: PaymentTransactionStatus,
     val tid: String?,
-)
-
-fun BillingPaymentResult.toResponse() = BillingPaymentResponse(orderKey, paymentKey, orderStatus, paymentStatus, tid, code, message)
-fun BillingPaymentResult.toPollingResponse() = PaymentPollingResponse(orderKey, paymentKey, orderStatus, paymentStatus, tid)
+) {
+    companion object {
+        fun of(result: BillingPaymentResult) = PaymentPollingResponse(
+            result.orderKey,
+            result.paymentKey,
+            result.orderStatus,
+            result.paymentStatus,
+            result.tid,
+        )
+    }
+}

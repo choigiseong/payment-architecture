@@ -2,22 +2,29 @@ package com.coco.payment.controller.dto
 
 import com.coco.payment.service.dto.BillingOrderItem
 import com.coco.payment.service.dto.BillingPaymentCommand
+import jakarta.validation.Valid
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.NotEmpty
+import jakarta.validation.constraints.Positive
 
 data class BillingPaymentRequest(
     val companySeq: Long,
+    @field:NotBlank
     val orderKey: String,
+    @field:NotBlank
     val paymentKey: String,
     val orderName: String,
+    @field:Positive
     val totalPrice: Long,
+    @field:NotEmpty
+    @field:Valid
     val items: List<BillingPaymentItemRequest>,
 ) {
-    fun toCommand(): BillingPaymentCommand {
-        require(orderKey.isNotBlank()) { "orderKey must not be blank" }
-        require(paymentKey.isNotBlank()) { "paymentKey must not be blank" }
-        require(totalPrice > 0) { "totalPrice must be positive" }
-        require(items.isNotEmpty()) { "items must not be empty" }
-        return BillingPaymentCommand(companySeq, orderKey, paymentKey, orderName, totalPrice, items.map { BillingOrderItem(it.itemName, it.unitPrice, it.quantity) })
-    }
+    fun toCommand() = BillingPaymentCommand.of(companySeq, orderKey, paymentKey, orderName, totalPrice, items.map { BillingOrderItem(it.itemName, it.unitPrice, it.quantity) })
 }
 
-data class BillingPaymentItemRequest(val itemName: String, val unitPrice: Long, val quantity: Int)
+data class BillingPaymentItemRequest(
+    @field:NotBlank val itemName: String,
+    @field:Positive val unitPrice: Long,
+    @field:Positive val quantity: Int,
+)
