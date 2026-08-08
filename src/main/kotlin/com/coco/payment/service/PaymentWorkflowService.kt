@@ -17,6 +17,8 @@ class PaymentWorkflowService(
 ) {
     fun findByPaymentKey(paymentKey: String) = paymentTransactionService.findByPaymentKey(paymentKey)
 
+    // TODO: PENDING 거래의 PG 승인 결과 조회 및 만료·재처리 정책을 추가한다.
+
     @Transactional
     fun prepare(command: BillingPaymentCommand): PrepareBillingPaymentResult {
         val existingOrder = orderService.findByOrderKey(command.orderKey)

@@ -20,6 +20,7 @@ class BillingPaymentFacade(
     fun pay(command: BillingPaymentCommand): BillingPaymentResult {
         val existingTransaction = paymentWorkflowService.findByPaymentKey(command.paymentKey)
         if (existingTransaction != null) {
+            // TODO: 동일 주문에 이미 PENDING 거래가 있으면 신규 결제를 제한하는 정책을 추가한다.
             val order = orderService.findById(existingTransaction.orderSeq)
                 ?: throw IllegalStateException("Order not found for payment transaction: ${existingTransaction.id}")
             return BillingPaymentResult(
