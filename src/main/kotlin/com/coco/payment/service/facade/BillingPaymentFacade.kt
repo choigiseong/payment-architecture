@@ -25,8 +25,10 @@ class BillingPaymentFacade(
                 billingPaymentService.complete(prepared, result.value)
                 result
             }
-            is PaymentResult.Failure -> result
-            is PaymentResult.Unknown -> result
+            is PaymentResult.Failure, is PaymentResult.Unknown -> {
+                billingPaymentService.fail(prepared)
+                result
+            }
         }
     }
 }

@@ -13,6 +13,6 @@ interface PaymentTransactionRepository {
         @Param("id") id: Long,
         @Param("fromStatus") fromStatus: PaymentTransactionStatus,
         @Param("toStatus") toStatus: PaymentTransactionStatus,
-        @Param("tid") tid: String,
+        @Param("tid") tid: String?,
     ): Int
 }

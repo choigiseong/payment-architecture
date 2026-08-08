@@ -22,9 +22,10 @@
         WHERE r.id = #{id}
     </select>
 
-    <update id="updateStatus">
+    <update id="mark">
         UPDATE "order"
-        SET status = #{status}
+        SET status = #{toStatus}
         WHERE id = #{id}
+          AND status = #{fromStatus}
     </update>
 </mapper>

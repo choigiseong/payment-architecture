@@ -29,4 +29,10 @@ class BillingPaymentService(
         paymentTransactionService.complete(prepared.paymentTransactionId, result.tid)
         orderService.markPaid(prepared.orderId)
     }
+
+    @Transactional
+    fun fail(prepared: PrepareBillingPaymentResult) {
+        paymentTransactionService.fail(prepared.paymentTransactionId)
+        orderService.markPaymentFailed(prepared.orderId)
+    }
 }

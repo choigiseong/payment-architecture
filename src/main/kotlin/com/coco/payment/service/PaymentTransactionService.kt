@@ -18,4 +18,10 @@ class PaymentTransactionService(private val paymentTransactionRepository: Paymen
             "Failed to mark payment transaction as successful"
         }
     }
+
+    fun fail(paymentTransactionId: Long) {
+        check(paymentTransactionRepository.mark(paymentTransactionId, PaymentTransactionStatus.PENDING, PaymentTransactionStatus.FAILED, null) == 1) {
+            "Failed to mark payment transaction as failed"
+        }
+    }
 }
