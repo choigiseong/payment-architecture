@@ -1,26 +1,31 @@
 package com.coco.payment.service
 
-import com.coco.payment.persistence.enumerator.OrderItemStatus
+import com.coco.payment.persistence.enumerator.OrderStatus
+import com.coco.payment.persistence.model.Order
+import com.coco.payment.persistence.model.OrderItem
 import com.coco.payment.persistence.repository.OrderItemRepository
+import com.coco.payment.persistence.repository.OrderRepository
+import com.coco.payment.service.dto.BillingOrderItem
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 
 @Service
-class OrderService(
-    private val orderItemRepository: OrderItemRepository
-) {
-
-    @Transactional
-    fun refundOrderItem(orderItemSeq: Long) {
-        val affected = orderItemRepository.updateStatus(
-            orderItemSeq,
-            setOf(OrderItemStatus.ORDERED, OrderItemStatus.PARTIALLY_REFUNDED),
-            OrderItemStatus.REFUNDED
-        )
-        
-        if (affected != 1) {
-            // 이미 환불되었거나 상태가 맞지 않는 경우
-            // throw IllegalStateException("OrderItem status update failed for id: $orderItemSeq")
+class OrderService(private val orderRepository: OrderRepository, private val orderItemRepository: OrderItemRepository) {
+    fun createPendingOrder(companySeq: Long, totalPrice: Long, items: List<BillingOrderItem>): Long {
+        val order = Order(null, companySeq, totalPrice, OrderStatus.PENDING_PAYMENT, null, null)
+        check(orderRepository.insert(order) == 1) { "Failed to insert order" }
+        items.forEach { item ->
+            check(orderItemRepository.insert(OrderItem(null, order.id!!, item.itemName, item.unitPrice, item.quantity, null, null)) == 1) {
+                "Failed to insert order item"
+            }
         }
+        return order.id!!
+    }
+
+    fun markPaid(orderId: Long) {
+        check(orderRepository.mark(orderId, OrderStatus.PENDING_PAYMENT, OrderStatus.PAID) == 1) { "Failed to mark order as paid" }
+    }
+
+    fun markPaymentFailed(orderId: Long) {
+        check(orderRepository.mark(orderId, OrderStatus.PENDING_PAYMENT, OrderStatus.PAYMENT_FAILED) == 1) { "Failed to mark order as failed" }
     }
 }

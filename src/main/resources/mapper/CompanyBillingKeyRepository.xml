@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.coco.payment.persistence.repository.CompanyBillingKeyRepository">
+    <sql id="companyBillingKeyColumns">
+        r.id AS id,
+        r.company_seq AS companySeq,
+        r.payment_system AS paymentSystem,
+        r.customer_key AS customerKey,
+        r.billing_key AS billingKey,
+        r.created_at AS createdAt,
+        r.updated_at AS updatedAt
+    </sql>
+
+    <insert id="insert" parameterType="company_billing_key"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO company_billing_key (
+            company_seq,
+            payment_system,
+            customer_key,
+            billing_key
+        ) VALUES (
+            #{companySeq},
+            #{paymentSystem},
+            #{customerKey},
+            #{billingKey}
+        )
+    </insert>
+
+    <select id="findByCompanySeqAndPaymentSystem" resultType="company_billing_key">
+        SELECT <include refid="companyBillingKeyColumns" />
+        FROM company_billing_key AS r
+        WHERE r.company_seq = #{companySeq}
+          AND r.payment_system = #{paymentSystem}
+    </select>
+
+    <update id="updateBillingKey">
+        UPDATE company_billing_key
+        SET billing_key = #{billingKey}
+        WHERE id = #{id}
+    </update>
+</mapper>

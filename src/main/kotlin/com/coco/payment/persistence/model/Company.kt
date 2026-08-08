@@ -3,13 +3,10 @@ package com.coco.payment.persistence.model
 import java.time.Instant
 import org.apache.ibatis.type.Alias
 
-@Alias("order_item")
-data class OrderItem(
+@Alias("company")
+data class Company(
     var id: Long?,
-    val orderSeq: Long,
-    val itemName: String,
-    val unitPrice: Long,
-    val quantity: Int,
+    val companyName: String,
     var createdAt: Instant?,
     var updatedAt: Instant?,
 )

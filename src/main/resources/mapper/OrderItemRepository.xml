@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.coco.payment.persistence.repository.OrderItemRepository">
+    <sql id="orderItemColumns">
+        r.id AS id,
+        r.order_seq AS orderSeq,
+        r.item_name AS itemName,
+        r.unit_price AS unitPrice,
+        r.quantity AS quantity,
+        r.created_at AS createdAt,
+        r.updated_at AS updatedAt
+    </sql>
+
+    <insert id="insert" parameterType="com.coco.payment.persistence.model.OrderItem"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO order_item (order_seq, item_name, unit_price, quantity)
+        VALUES (#{orderSeq}, #{itemName}, #{unitPrice}, #{quantity})
+    </insert>
+
+    <select id="findById" resultType="order_item">
+        SELECT <include refid="orderItemColumns" />
+        FROM order_item AS r
+        WHERE r.id = #{id}
+    </select>
+</mapper>

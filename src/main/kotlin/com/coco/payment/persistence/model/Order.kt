@@ -2,14 +2,14 @@ package com.coco.payment.persistence.model
 
 import java.time.Instant
 import org.apache.ibatis.type.Alias
+import com.coco.payment.persistence.enumerator.OrderStatus
 
-@Alias("order_item")
-data class OrderItem(
+@Alias("order")
+data class Order(
     var id: Long?,
-    val orderSeq: Long,
-    val itemName: String,
-    val unitPrice: Long,
-    val quantity: Int,
+    val companySeq: Long,
+    val totalPrice: Long,
+    val status: OrderStatus,
     var createdAt: Instant?,
     var updatedAt: Instant?,
 )
