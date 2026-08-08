@@ -1,8 +1,8 @@
 package com.coco.payment.handler.paymentgateway.toss
 
 import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingPaymentCommand
-import com.coco.payment.service.dto.BillingPaymentResult
-import com.coco.payment.service.dto.PaymentResult
+import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingPaymentResult
+import com.coco.payment.handler.paymentgateway.dto.PaymentResult
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
@@ -15,7 +15,7 @@ class TossBillingPaymentHandler(
     @Value("\${payment.toss.secret-key}")
     private val secretKey: String,
 ) {
-    fun approve(command: TossBillingPaymentCommand): PaymentResult<BillingPaymentResult> {
+    fun approve(command: TossBillingPaymentCommand): PaymentResult<TossBillingPaymentResult> {
         require(secretKey.isNotBlank()) { "TOSS_SECRET_KEY must be configured" }
 
         return try {
@@ -42,7 +42,7 @@ class TossBillingPaymentHandler(
                 ?: return PaymentResult.Unknown(PaymentResult.PaymentError(null, "Toss billing payment response is empty"))
 
             PaymentResult.Success(
-                BillingPaymentResult(
+                TossBillingPaymentResult(
                     tid = response.paymentKey,
                     moid = response.orderId,
                     amount = response.totalAmount,

@@ -3,6 +3,7 @@
 <mapper namespace="com.coco.payment.persistence.repository.PaymentTransactionRepository">
     <sql id="paymentTransactionColumns">
         r.id AS id,
+        r.payment_key AS paymentKey,
         r.order_seq AS orderSeq,
         r.moid AS moid,
         r.tid AS tid,
@@ -14,14 +15,20 @@
 
     <insert id="insert" parameterType="com.coco.payment.persistence.model.PaymentTransaction"
             useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO payment_transaction (order_seq, moid, tid, amount, status)
-        VALUES (#{orderSeq}, #{moid}, #{tid}, #{amount}, #{status})
+        INSERT INTO payment_transaction (payment_key, order_seq, moid, tid, amount, status)
+        VALUES (#{paymentKey}, #{orderSeq}, #{moid}, #{tid}, #{amount}, #{status})
     </insert>
 
     <select id="findById" resultType="payment_transaction">
         SELECT <include refid="paymentTransactionColumns" />
         FROM payment_transaction AS r
         WHERE r.id = #{id}
+    </select>
+
+    <select id="findByPaymentKey" resultType="payment_transaction">
+        SELECT <include refid="paymentTransactionColumns" />
+        FROM payment_transaction AS r
+        WHERE r.payment_key = #{paymentKey}
     </select>
 
     <update id="mark">

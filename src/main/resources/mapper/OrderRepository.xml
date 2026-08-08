@@ -3,6 +3,7 @@
 <mapper namespace="com.coco.payment.persistence.repository.OrderRepository">
     <sql id="orderColumns">
         r.id AS id,
+        r.order_key AS orderKey,
         r.company_seq AS companySeq,
         r.total_price AS totalPrice,
         r.status AS status,
@@ -12,14 +13,20 @@
 
     <insert id="insert" parameterType="com.coco.payment.persistence.model.Order"
             useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO "order" (company_seq, total_price, status)
-        VALUES (#{companySeq}, #{totalPrice}, #{status})
+        INSERT INTO "order" (order_key, company_seq, total_price, status)
+        VALUES (#{orderKey}, #{companySeq}, #{totalPrice}, #{status})
     </insert>
 
     <select id="findById" resultType="order">
         SELECT <include refid="orderColumns" />
         FROM "order" AS r
         WHERE r.id = #{id}
+    </select>
+
+    <select id="findByOrderKey" resultType="order">
+        SELECT <include refid="orderColumns" />
+        FROM "order" AS r
+        WHERE r.order_key = #{orderKey}
     </select>
 
     <update id="mark">

@@ -7,6 +7,7 @@ import com.coco.payment.persistence.enumerator.PaymentTransactionStatus
 @Alias("payment_transaction")
 data class PaymentTransaction(
     var id: Long?,
+    val paymentKey: String,
     val orderSeq: Long,
     val moid: String,
     val tid: String?,

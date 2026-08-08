@@ -9,6 +9,8 @@ interface PaymentTransactionRepository {
 
     fun findById(@Param("id") id: Long): PaymentTransaction?
 
+    fun findByPaymentKey(@Param("paymentKey") paymentKey: String): PaymentTransaction?
+
     fun mark(
         @Param("id") id: Long,
         @Param("fromStatus") fromStatus: PaymentTransactionStatus,

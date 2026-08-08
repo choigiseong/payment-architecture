@@ -10,8 +10,11 @@ import org.springframework.stereotype.Service
 
 @Service
 class OrderService(private val orderRepository: OrderRepository, private val orderItemRepository: OrderItemRepository) {
-    fun createPendingOrder(companySeq: Long, totalPrice: Long, items: List<BillingOrderItem>): Long {
-        val order = Order(null, companySeq, totalPrice, OrderStatus.PENDING_PAYMENT, null, null)
+    fun findByOrderKey(orderKey: String) = orderRepository.findByOrderKey(orderKey)
+    fun findById(orderId: Long) = orderRepository.findById(orderId)
+
+    fun createPendingOrder(orderKey: String, companySeq: Long, totalPrice: Long, items: List<BillingOrderItem>): Long {
+        val order = Order(null, orderKey, companySeq, totalPrice, OrderStatus.PENDING_PAYMENT, null, null)
         check(orderRepository.insert(order) == 1) { "Failed to insert order" }
         items.forEach { item ->
             check(orderItemRepository.insert(OrderItem(null, order.id!!, item.itemName, item.unitPrice, item.quantity, null, null)) == 1) {

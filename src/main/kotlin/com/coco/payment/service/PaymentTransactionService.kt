@@ -7,8 +7,10 @@ import org.springframework.stereotype.Service
 
 @Service
 class PaymentTransactionService(private val paymentTransactionRepository: PaymentTransactionRepository) {
-    fun createPending(orderId: Long, moid: String, amount: Long): Long {
-        val transaction = PaymentTransaction(null, orderId, moid, null, amount, PaymentTransactionStatus.PENDING, null, null)
+    fun findByPaymentKey(paymentKey: String) = paymentTransactionRepository.findByPaymentKey(paymentKey)
+
+    fun createPending(paymentKey: String, orderId: Long, moid: String, amount: Long): Long {
+        val transaction = PaymentTransaction(null, paymentKey, orderId, moid, null, amount, PaymentTransactionStatus.PENDING, null, null)
         check(paymentTransactionRepository.insert(transaction) == 1) { "Failed to insert payment transaction" }
         return transaction.id!!
     }
