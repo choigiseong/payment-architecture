@@ -2,15 +2,21 @@ package com.coco.payment.service
 
 import com.coco.payment.service.dto.BillingPaymentCommand
 import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingPaymentResult
+import com.coco.payment.persistence.enumerator.PaymentSystem
+import com.coco.payment.persistence.repository.CompanyBillingKeyRepository
 import com.coco.payment.service.dto.PrepareBillingPaymentResult
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.util.UUID
 
 @Service
 class PaymentWorkflowService(
     private val orderService: OrderService,
-    private val billingPaymentService: BillingPaymentService,
+    private val paymentTransactionService: PaymentTransactionService,
+    private val companyBillingKeyRepository: CompanyBillingKeyRepository,
 ) {
+    fun findByPaymentKey(paymentKey: String) = paymentTransactionService.findByPaymentKey(paymentKey)
+
     @Transactional
     fun prepare(command: BillingPaymentCommand): PrepareBillingPaymentResult {
         val existingOrder = orderService.findByOrderKey(command.orderKey)
@@ -23,18 +29,22 @@ class PaymentWorkflowService(
             val orderId = orderService.createPendingOrder(command.orderKey, command.companySeq, command.totalPrice, command.items)
             orderService.findById(orderId) ?: error("Created order not found: $orderId")
         }
-        return billingPaymentService.prepare(order.id!!, command)
+        val moid = UUID.randomUUID().toString()
+        val paymentTransactionId = paymentTransactionService.createPending(command.paymentKey, order.id!!, moid, command.totalPrice)
+        val billingKey = companyBillingKeyRepository.findByCompanySeqAndPaymentSystem(command.companySeq, PaymentSystem.TOSS)
+            ?: throw IllegalArgumentException("Toss billing key not found for company: ${command.companySeq}")
+        return PrepareBillingPaymentResult(order.id!!, paymentTransactionId, command.orderKey, command.paymentKey, billingKey.billingKey, billingKey.customerKey, moid, command.orderName, command.totalPrice)
     }
 
     @Transactional
     fun complete(prepared: PrepareBillingPaymentResult, result: TossBillingPaymentResult) {
-        billingPaymentService.complete(prepared, result)
+        paymentTransactionService.complete(prepared.paymentTransactionId, result.tid)
         orderService.markPaid(prepared.orderId)
     }
 
     @Transactional
     fun fail(prepared: PrepareBillingPaymentResult) {
-        billingPaymentService.fail(prepared)
+        paymentTransactionService.fail(prepared.paymentTransactionId)
         orderService.markPaymentFailed(prepared.orderId)
     }
 }

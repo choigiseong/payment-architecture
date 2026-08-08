@@ -4,7 +4,6 @@ import com.coco.payment.handler.paymentgateway.toss.TossBillingPaymentHandler
 import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingPaymentCommand
 import com.coco.payment.persistence.enumerator.OrderStatus
 import com.coco.payment.persistence.enumerator.PaymentTransactionStatus
-import com.coco.payment.service.BillingPaymentService
 import com.coco.payment.service.OrderService
 import com.coco.payment.service.PaymentWorkflowService
 import com.coco.payment.service.dto.BillingPaymentCommand
@@ -15,12 +14,11 @@ import org.springframework.stereotype.Service
 @Service
 class BillingPaymentFacade(
     private val orderService: OrderService,
-    private val billingPaymentService: BillingPaymentService,
     private val paymentWorkflowService: PaymentWorkflowService,
     private val tossBillingPaymentHandler: TossBillingPaymentHandler,
 ) {
     fun pay(command: BillingPaymentCommand): BillingPaymentResult {
-        val existingTransaction = billingPaymentService.findByPaymentKey(command.paymentKey)
+        val existingTransaction = paymentWorkflowService.findByPaymentKey(command.paymentKey)
         if (existingTransaction != null) {
             val order = orderService.findById(existingTransaction.orderSeq)
                 ?: throw IllegalStateException("Order not found for payment transaction: ${existingTransaction.id}")
@@ -57,7 +55,7 @@ class BillingPaymentFacade(
     }
 
     fun poll(paymentKey: String): BillingPaymentResult? {
-        val transaction = billingPaymentService.findByPaymentKey(paymentKey) ?: return null
+        val transaction = paymentWorkflowService.findByPaymentKey(paymentKey) ?: return null
         val order = orderService.findById(transaction.orderSeq) ?: return null
         return BillingPaymentResult(order.orderKey, transaction.paymentKey, order.status, transaction.status, transaction.tid, null, null)
     }
