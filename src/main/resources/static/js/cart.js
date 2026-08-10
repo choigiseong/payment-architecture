@@ -1,4 +1,5 @@
 const CART_KEY = "cart";
+const ORDER_KEY_KEY = "orderKey";
 const COMPANY_SEQ = 1; // 하드코딩된 단일 회사
 
 function getCart() {
@@ -7,6 +8,7 @@ function getCart() {
 
 function saveCart(cart) {
     localStorage.setItem(CART_KEY, JSON.stringify(cart));
+    invalidateOrderKey();
 }
 
 function addToCart(productId, name, price) {
@@ -26,10 +28,25 @@ function removeFromCart(productId) {
 
 function clearCart() {
     localStorage.removeItem(CART_KEY);
+    invalidateOrderKey();
 }
 
 function cartTotal(cart) {
     return cart.reduce((sum, l) => sum + l.price * l.quantity, 0);
+}
+
+// 장바구니 내용이 바뀌지 않는 한 같은 orderKey를 재사용한다(재시도 시 같은 주문으로 취급되도록).
+function getOrderKey() {
+    let orderKey = localStorage.getItem(ORDER_KEY_KEY);
+    if (!orderKey) {
+        orderKey = crypto.randomUUID();
+        localStorage.setItem(ORDER_KEY_KEY, orderKey);
+    }
+    return orderKey;
+}
+
+function invalidateOrderKey() {
+    localStorage.removeItem(ORDER_KEY_KEY);
 }
 
 const POLL_INITIAL_DELAY_MS = 2000;

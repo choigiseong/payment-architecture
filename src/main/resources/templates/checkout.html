@@ -9,6 +9,7 @@
     <div class="total-row"><span>합계</span><span id="checkout-total">0원</span></div>
 </div>
 <button type="button" id="pay-button" class="btn btn-primary btn-block" onclick="pay()">결제</button>
+<p id="pay-error" class="muted" style="color: var(--danger); display:none"></p>
 
 <script>
     function renderSummary() {
@@ -25,16 +26,20 @@
             alert("장바구니가 비어 있습니다");
             return;
         }
+        if (!confirm(`총 ${cartTotal(cart)}원을 결제하시겠습니까?`)) {
+            return;
+        }
         const paymentKey = crypto.randomUUID();
         const body = {
             companySeq: COMPANY_SEQ,
-            orderKey: crypto.randomUUID(),
+            orderKey: getOrderKey(),
             paymentKey: paymentKey,
             orderName: "장바구니 결제",
             totalPrice: cartTotal(cart),
             items: cart.map(line => ({ itemName: line.name, unitPrice: line.price, quantity: line.quantity })),
         };
         document.getElementById("pay-button").disabled = true;
+        document.getElementById("pay-error").style.display = "none";
         fetch("/api/payments", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -43,6 +48,12 @@
             .then(() => {
                 clearCart();
                 window.location.href = `/checkout/result?paymentKey=${encodeURIComponent(paymentKey)}`;
+            })
+            .catch(() => {
+                document.getElementById("pay-button").disabled = false;
+                const error = document.getElementById("pay-error");
+                error.textContent = "네트워크 오류로 결제 요청을 보내지 못했습니다. 다시 시도해 주세요.";
+                error.style.display = "block";
             });
     }
 
