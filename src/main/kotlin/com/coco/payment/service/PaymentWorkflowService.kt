@@ -7,7 +7,6 @@ import com.coco.payment.persistence.repository.CompanyBillingKeyRepository
 import com.coco.payment.service.dto.PrepareBillingPaymentResult
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.util.UUID
 
 @Service
 class PaymentWorkflowService(
@@ -31,7 +30,7 @@ class PaymentWorkflowService(
             val orderId = orderService.createPendingOrder(command.orderKey, command.companySeq, command.totalPrice, command.items)
             orderService.findById(orderId) ?: error("Created order not found: $orderId")
         }
-        val moid = UUID.randomUUID().toString()
+        val moid = command.paymentKey
         val paymentTransactionId = paymentTransactionService.createPending(command.paymentKey, order.id!!, moid, command.totalPrice)
         val billingKey = companyBillingKeyRepository.findByCompanySeqAndPaymentSystem(command.companySeq, PaymentSystem.TOSS)
             ?: throw IllegalArgumentException("Toss billing key not found for company: ${command.companySeq}")
