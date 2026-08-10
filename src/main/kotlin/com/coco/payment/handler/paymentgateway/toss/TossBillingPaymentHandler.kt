@@ -54,6 +54,39 @@ class TossBillingPaymentHandler(
             PaymentResult.Unknown(PaymentResult.PaymentError(null, exception.message ?: "Toss billing payment request failed"))
         }
     }
+
+    fun inquiry(moid: String): PaymentResult<TossBillingPaymentResult> {
+        require(secretKey.isNotBlank()) { "TOSS_SECRET_KEY must be configured" }
+
+        return try {
+            val response = tossRestClient.get()
+                .uri("/v1/payments/orders/{orderId}", moid)
+                .headers { headers -> headers.setBasicAuth(secretKey, "") }
+                .retrieve()
+                .onStatus({ status -> status.isError }) { _, clientResponse ->
+                    throw TossPaymentException(
+                        code = clientResponse.statusCode.value().toString(),
+                        message = "Toss payment inquiry failed: ${clientResponse.statusCode}",
+                    )
+                }
+                .body(TossPaymentInquiryResponse::class.java)
+                ?: return PaymentResult.Unknown(PaymentResult.PaymentError(null, "Toss payment inquiry response is empty"))
+
+            when (response.status) {
+                "DONE" -> PaymentResult.Success(
+                    TossBillingPaymentResult(tid = response.paymentKey, moid = response.orderId, amount = response.totalAmount)
+                )
+                "CANCELED", "PARTIAL_CANCELED", "ABORTED", "EXPIRED" ->
+                    PaymentResult.Failure(PaymentResult.PaymentError(response.status, "Toss payment status: ${response.status}"))
+                else ->
+                    PaymentResult.Unknown(PaymentResult.PaymentError(response.status, "Toss payment still in progress: ${response.status}"))
+            }
+        } catch (exception: TossPaymentException) {
+            PaymentResult.Unknown(PaymentResult.PaymentError(exception.code, exception.message ?: "Toss payment inquiry failed"))
+        } catch (exception: RestClientException) {
+            PaymentResult.Unknown(PaymentResult.PaymentError(null, exception.message ?: "Toss payment inquiry request failed"))
+        }
+    }
 }
 
 private data class TossBillingPaymentRequest(
@@ -64,6 +97,13 @@ private data class TossBillingPaymentRequest(
 )
 
 private data class TossBillingPaymentResponse(
+    val paymentKey: String,
+    val orderId: String,
+    val totalAmount: Long,
+    val status: String,
+)
+
+private data class TossPaymentInquiryResponse(
     val paymentKey: String,
     val orderId: String,
     val totalAmount: Long,

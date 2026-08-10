@@ -13,6 +13,7 @@ data class PaymentTransaction(
     val tid: String?,
     val amount: Long,
     val status: PaymentTransactionStatus,
+    val expiredAt: Instant,
     var createdAt: Instant?,
     var updatedAt: Instant?,
 )

@@ -34,6 +34,7 @@ CREATE TABLE payment_transaction (
     tid VARCHAR(100),
     amount BIGINT NOT NULL,
     status SMALLINT NOT NULL,
+    expired_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT uk_payment_transaction_payment_key UNIQUE (payment_key)

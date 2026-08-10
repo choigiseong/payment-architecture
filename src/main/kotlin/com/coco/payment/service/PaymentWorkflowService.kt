@@ -5,14 +5,18 @@ import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingPaymentResult
 import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.persistence.repository.CompanyBillingKeyRepository
 import com.coco.payment.service.dto.PrepareBillingPaymentResult
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
 
 @Service
 class PaymentWorkflowService(
     private val orderService: OrderService,
     private val paymentTransactionService: PaymentTransactionService,
     private val companyBillingKeyRepository: CompanyBillingKeyRepository,
+    @Value("\${payment.pending-timeout-seconds}")
+    private val pendingTimeoutSeconds: Long,
 ) {
     fun findByPaymentKey(paymentKey: String) = paymentTransactionService.findByPaymentKey(paymentKey)
 
@@ -35,7 +39,8 @@ class PaymentWorkflowService(
         }
 
         val moid = command.paymentKey
-        val paymentTransactionId = paymentTransactionService.createPending(command.paymentKey, order.id!!, moid, command.totalPrice)
+        val expiredAt = Instant.now().plusSeconds(pendingTimeoutSeconds)
+        val paymentTransactionId = paymentTransactionService.createPending(command.paymentKey, order.id!!, moid, command.totalPrice, expiredAt)
         val billingKey = companyBillingKeyRepository.findByCompanySeqAndPaymentSystem(command.companySeq, PaymentSystem.TOSS)
             ?: throw IllegalArgumentException("Toss billing key not found for company: ${command.companySeq}")
         return PrepareBillingPaymentResult.Ready(order.id!!, paymentTransactionId, command.orderKey, command.paymentKey, billingKey.billingKey, billingKey.customerKey, moid, command.orderName, command.totalPrice)
@@ -51,5 +56,21 @@ class PaymentWorkflowService(
     fun fail(prepared: PrepareBillingPaymentResult.Ready) {
         paymentTransactionService.fail(prepared.paymentTransactionId)
         orderService.markPaymentFailed(prepared.orderId)
+    }
+
+    @Transactional
+    fun completeByTransactionId(paymentTransactionId: Long, tid: String) {
+        val transaction = paymentTransactionService.findById(paymentTransactionId)
+            ?: error("Payment transaction not found: $paymentTransactionId")
+        paymentTransactionService.complete(paymentTransactionId, tid)
+        orderService.markPaid(transaction.orderSeq)
+    }
+
+    @Transactional
+    fun failByTransactionId(paymentTransactionId: Long) {
+        val transaction = paymentTransactionService.findById(paymentTransactionId)
+            ?: error("Payment transaction not found: $paymentTransactionId")
+        paymentTransactionService.fail(paymentTransactionId)
+        orderService.markPaymentFailed(transaction.orderSeq)
     }
 }
