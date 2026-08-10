@@ -7,11 +7,16 @@ import com.coco.payment.persistence.repository.OrderItemRepository
 import com.coco.payment.persistence.repository.OrderRepository
 import com.coco.payment.service.dto.BillingOrderItem
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 @Service
 class OrderService(private val orderRepository: OrderRepository, private val orderItemRepository: OrderItemRepository) {
-    fun createPendingOrder(companySeq: Long, totalPrice: Long, items: List<BillingOrderItem>): Long {
-        val order = Order(null, companySeq, totalPrice, OrderStatus.PENDING_PAYMENT, null, null)
+    fun findByOrderKey(orderKey: String) = orderRepository.findByOrderKey(orderKey)
+    fun findByOrderKeyForUpdate(orderKey: String) = orderRepository.findByOrderKeyForUpdate(orderKey)
+    fun findById(orderId: Long) = orderRepository.findById(orderId)
+
+    fun createPendingOrder(orderKey: String, companySeq: Long, totalPrice: Long, items: List<BillingOrderItem>): Long {
+        val order = Order(null, orderKey, companySeq, totalPrice, OrderStatus.PENDING_PAYMENT, null, null)
         check(orderRepository.insert(order) == 1) { "Failed to insert order" }
         items.forEach { item ->
             check(orderItemRepository.insert(OrderItem(null, order.id!!, item.itemName, item.unitPrice, item.quantity, null, null)) == 1) {
@@ -21,10 +26,12 @@ class OrderService(private val orderRepository: OrderRepository, private val ord
         return order.id!!
     }
 
+    @Transactional
     fun markPaid(orderId: Long) {
         check(orderRepository.mark(orderId, OrderStatus.PENDING_PAYMENT, OrderStatus.PAID) == 1) { "Failed to mark order as paid" }
     }
 
+    @Transactional
     fun markPaymentFailed(orderId: Long) {
         check(orderRepository.mark(orderId, OrderStatus.PENDING_PAYMENT, OrderStatus.PAYMENT_FAILED) == 1) { "Failed to mark order as failed" }
     }

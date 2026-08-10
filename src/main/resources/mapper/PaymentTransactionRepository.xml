@@ -3,19 +3,21 @@
 <mapper namespace="com.coco.payment.persistence.repository.PaymentTransactionRepository">
     <sql id="paymentTransactionColumns">
         r.id AS id,
+        r.payment_key AS paymentKey,
         r.order_seq AS orderSeq,
         r.moid AS moid,
         r.tid AS tid,
         r.amount AS amount,
         r.status AS status,
+        r.expired_at AS expiredAt,
         r.created_at AS createdAt,
         r.updated_at AS updatedAt
     </sql>
 
     <insert id="insert" parameterType="com.coco.payment.persistence.model.PaymentTransaction"
             useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO payment_transaction (order_seq, moid, tid, amount, status)
-        VALUES (#{orderSeq}, #{moid}, #{tid}, #{amount}, #{status})
+        INSERT INTO payment_transaction (payment_key, order_seq, moid, tid, amount, status, expired_at)
+        VALUES (#{paymentKey}, #{orderSeq}, #{moid}, #{tid}, #{amount}, #{status}, #{expiredAt})
     </insert>
 
     <select id="findById" resultType="payment_transaction">
@@ -23,6 +25,32 @@
         FROM payment_transaction AS r
         WHERE r.id = #{id}
     </select>
+
+    <select id="findByPaymentKey" resultType="payment_transaction">
+        SELECT <include refid="paymentTransactionColumns" />
+        FROM payment_transaction AS r
+        WHERE r.payment_key = #{paymentKey}
+    </select>
+
+    <select id="findByOrderSeqAndStatus" resultType="payment_transaction">
+        SELECT <include refid="paymentTransactionColumns" />
+        FROM payment_transaction AS r
+        WHERE r.order_seq = #{orderSeq}
+          AND r.status = #{status}
+    </select>
+
+    <select id="findExpiredPending" resultType="payment_transaction">
+        SELECT <include refid="paymentTransactionColumns" />
+        FROM payment_transaction AS r
+        WHERE r.status = #{status}
+          AND r.expired_at &lt; #{now}
+    </select>
+
+    <update id="extendExpiry">
+        UPDATE payment_transaction
+        SET expired_at = #{expiredAt}
+        WHERE id = #{id}
+    </update>
 
     <update id="mark">
         UPDATE payment_transaction

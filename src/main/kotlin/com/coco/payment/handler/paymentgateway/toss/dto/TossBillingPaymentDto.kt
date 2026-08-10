@@ -7,3 +7,9 @@ data class TossBillingPaymentCommand(
     val orderName: String,
     val amount: Long,
 )
+
+data class TossBillingPaymentResult(
+    val tid: String,
+    val moid: String,
+    val amount: Long,
+)

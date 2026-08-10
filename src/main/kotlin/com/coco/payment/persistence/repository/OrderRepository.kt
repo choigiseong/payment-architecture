@@ -9,5 +9,9 @@ interface OrderRepository {
 
     fun findById(@Param("id") id: Long): Order?
 
+    fun findByOrderKey(@Param("orderKey") orderKey: String): Order?
+
+    fun findByOrderKeyForUpdate(@Param("orderKey") orderKey: String): Order?
+
     fun mark(@Param("id") id: Long, @Param("fromStatus") fromStatus: OrderStatus, @Param("toStatus") toStatus: OrderStatus): Int
 }
