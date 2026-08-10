@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav}"></nav>
+<h1>결제 결과</h1>
+<div id="result" class="card result-card" style="display:none"></div>
+<p><a href="/shop">상품 목록으로</a></p>
+
+<script>
+    const paymentKey = new URLSearchParams(window.location.search).get("paymentKey");
+
+    function loadResult() {
+        fetchPaymentStatus(paymentKey).then(result => {
+            if (!result) {
+                showNotFoundNotice();
+                return;
+            }
+            showResult(result);
+            if (result.paymentStatus === "PENDING") {
+                startPolling(paymentKey);
+            }
+        });
+    }
+
+    loadResult();
+</script>
+</body>
+</html>

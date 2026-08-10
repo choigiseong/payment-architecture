@@ -18,4 +18,7 @@ class ShopController {
 
     @GetMapping("/checkout")
     fun checkout(): String = "checkout"
+
+    @GetMapping("/checkout/result")
+    fun checkoutResult(): String = "checkout-result"
 }
