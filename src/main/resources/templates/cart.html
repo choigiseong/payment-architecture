@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav}"></nav>
+<h1>장바구니</h1>
+<div class="card">
+    <table>
+        <thead>
+        <tr>
+            <th>상품</th>
+            <th>가격</th>
+            <th>수량</th>
+            <th>소계</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody id="cart-lines"></tbody>
+    </table>
+    <div id="cart-empty" class="empty" style="display:none">장바구니가 비어 있습니다</div>
+    <div class="total-row"><span>합계</span><span id="cart-total">0원</span></div>
+</div>
+<a href="/checkout" class="btn btn-primary btn-block" style="text-align:center; text-decoration:none;">결제하기</a>
+
+<script>
+    function renderCart() {
+        const cart = getCart();
+        const tbody = document.getElementById("cart-lines");
+        tbody.innerHTML = cart.map(line => `
+            <tr>
+                <td>${line.name}</td>
+                <td>${line.price}원</td>
+                <td>${line.quantity}</td>
+                <td>${line.price * line.quantity}원</td>
+                <td><button type="button" class="btn btn-danger" onclick="removeLine(${line.productId})">삭제</button></td>
+            </tr>
+        `).join("");
+        document.getElementById("cart-empty").style.display = cart.length === 0 ? "block" : "none";
+        document.getElementById("cart-total").textContent = cartTotal(cart) + "원";
+    }
+
+    function removeLine(productId) {
+        removeFromCart(productId);
+        renderCart();
+    }
+
+    renderCart();
+</script>
+</body>
+</html>

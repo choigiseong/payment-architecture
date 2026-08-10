@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav}"></nav>
+<h1>결제</h1>
+<div class="card">
+    <ul id="checkout-lines" class="summary-list"></ul>
+    <div class="total-row"><span>합계</span><span id="checkout-total">0원</span></div>
+</div>
+<button type="button" id="pay-button" class="btn btn-primary btn-block" onclick="pay()">결제</button>
+<div id="result" class="card result-card" style="display:none"></div>
+
+<script>
+    let pollTimer = null;
+
+    function statusClass(status) {
+        return "status-badge status-" + status;
+    }
+
+    function renderSummary() {
+        const cart = getCart();
+        document.getElementById("checkout-lines").innerHTML = cart.map(line =>
+            `<li>${line.name} x ${line.quantity} = ${line.price * line.quantity}원</li>`
+        ).join("");
+        document.getElementById("checkout-total").textContent = cartTotal(cart) + "원";
+    }
+
+    function showResult(result) {
+        const box = document.getElementById("result");
+        box.style.display = "block";
+        box.innerHTML = `
+            <p>주문 상태: <span class="${statusClass(result.orderStatus)}">${result.orderStatus}</span></p>
+            <p>결제 상태: <span class="${statusClass(result.paymentStatus)}">${result.paymentStatus}</span></p>
+            <p class="muted">tid: ${result.tid ?? "-"}</p>
+            <p class="muted">${result.message ?? ""}</p>
+        `;
+    }
+
+    function pay() {
+        const cart = getCart();
+        if (cart.length === 0) {
+            alert("장바구니가 비어 있습니다");
+            return;
+        }
+        const paymentKey = crypto.randomUUID();
+        const body = {
+            companySeq: COMPANY_SEQ,
+            orderKey: crypto.randomUUID(),
+            paymentKey: paymentKey,
+            orderName: "장바구니 결제",
+            totalPrice: cartTotal(cart),
+            items: cart.map(line => ({ itemName: line.name, unitPrice: line.price, quantity: line.quantity })),
+        };
+        document.getElementById("pay-button").disabled = true;
+        fetch("/api/payments", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+        })
+            .then(res => res.json())
+            .then(result => {
+                clearCart();
+                showResult(result);
+                if (result.paymentStatus === "PENDING") {
+                    startPolling(paymentKey);
+                }
+            });
+    }
+
+    function startPolling(paymentKey) {
+        pollTimer = setInterval(() => {
+            fetch(`/api/payments/${paymentKey}`)
+                .then(res => res.json())
+                .then(result => {
+                    showResult(result);
+                    if (result.paymentStatus !== "PENDING") {
+                        clearInterval(pollTimer);
+                    }
+                });
+        }, 3000);
+    }
+
+    renderSummary();
+</script>
+</body>
+</html>
