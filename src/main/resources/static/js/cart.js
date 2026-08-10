@@ -35,6 +35,13 @@ function cartTotal(cart) {
     return cart.reduce((sum, l) => sum + l.price * l.quantity, 0);
 }
 
+// 서버가 응답을 주지 않으면 fetch가 무한정 매달려 있을 수 있어, 명시적으로 타임아웃을 건다.
+function fetchWithTimeout(url, options, timeoutMs) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
 // 장바구니 내용이 바뀌지 않는 한 같은 orderKey를 재사용한다(재시도 시 같은 주문으로 취급되도록).
 function getOrderKey() {
     let orderKey = localStorage.getItem(ORDER_KEY_KEY);
@@ -79,8 +86,11 @@ function showPollingTimeoutNotice() {
     document.getElementById("result").innerHTML += `<p class="muted">확인이 지연되고 있습니다. 잠시 후 새로고침해 주세요.</p>`;
 }
 
+const POLL_FETCH_TIMEOUT_MS = 10000;
+
 function fetchPaymentStatus(paymentKey) {
-    return fetch(`/api/payments/${paymentKey}`).then(res => (res.ok ? res.json() : null));
+    return fetchWithTimeout(`/api/payments/${paymentKey}`, {}, POLL_FETCH_TIMEOUT_MS)
+        .then(res => (res.ok ? res.json() : null));
 }
 
 function startPolling(paymentKey) {
@@ -92,20 +102,28 @@ function schedulePoll(paymentKey, delay) {
     setTimeout(() => pollOnce(paymentKey, delay), delay);
 }
 
+// 다음 폴링을 이어가거나, 총 폴링 시간이 다 됐으면 멈춘다. 정상 응답의 PENDING과
+// 타임아웃/네트워크 오류를 동일하게 "아직 모름"으로 취급해 같은 방식으로 재시도한다.
+function continuePollingOrTimeout(paymentKey, currentDelay) {
+    if (Date.now() - pollStartedAt >= POLL_MAX_DURATION_MS) {
+        showPollingTimeoutNotice();
+        return;
+    }
+    schedulePoll(paymentKey, Math.min(currentDelay * 2, POLL_MAX_DELAY_MS));
+}
+
 function pollOnce(paymentKey, currentDelay) {
-    fetchPaymentStatus(paymentKey).then(result => {
-        if (!result) {
-            showNotFoundNotice();
-            return;
-        }
-        showResult(result);
-        if (result.paymentStatus !== "PENDING") {
-            return;
-        }
-        if (Date.now() - pollStartedAt >= POLL_MAX_DURATION_MS) {
-            showPollingTimeoutNotice();
-            return;
-        }
-        schedulePoll(paymentKey, Math.min(currentDelay * 2, POLL_MAX_DELAY_MS));
-    });
+    fetchPaymentStatus(paymentKey)
+        .then(result => {
+            if (!result) {
+                showNotFoundNotice();
+                return;
+            }
+            showResult(result);
+            if (result.paymentStatus !== "PENDING") {
+                return;
+            }
+            continuePollingOrTimeout(paymentKey, currentDelay);
+        })
+        .catch(() => continuePollingOrTimeout(paymentKey, currentDelay));
 }

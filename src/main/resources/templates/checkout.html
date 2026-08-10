@@ -40,11 +40,11 @@
         };
         document.getElementById("pay-button").disabled = true;
         document.getElementById("pay-error").style.display = "none";
-        fetch("/api/payments", {
+        fetchWithTimeout("/api/payments", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),
-        })
+        }, 35000)
             .then(() => {
                 clearCart();
                 window.location.href = `/checkout/result?paymentKey=${encodeURIComponent(paymentKey)}`;
