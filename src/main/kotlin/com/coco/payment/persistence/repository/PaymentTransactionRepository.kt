@@ -11,6 +11,11 @@ interface PaymentTransactionRepository {
 
     fun findByPaymentKey(@Param("paymentKey") paymentKey: String): PaymentTransaction?
 
+    fun findByOrderSeqAndStatus(
+        @Param("orderSeq") orderSeq: Long,
+        @Param("status") status: PaymentTransactionStatus,
+    ): PaymentTransaction?
+
     fun mark(
         @Param("id") id: Long,
         @Param("fromStatus") fromStatus: PaymentTransactionStatus,

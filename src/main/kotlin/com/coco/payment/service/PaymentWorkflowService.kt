@@ -16,11 +16,9 @@ class PaymentWorkflowService(
 ) {
     fun findByPaymentKey(paymentKey: String) = paymentTransactionService.findByPaymentKey(paymentKey)
 
-    // TODO: PENDING 거래의 PG 승인 결과 조회 및 만료·재처리 정책을 추가한다.
-
     @Transactional
     fun prepare(command: BillingPaymentCommand): PrepareBillingPaymentResult {
-        val existingOrder = orderService.findByOrderKey(command.orderKey)
+        val existingOrder = orderService.findByOrderKeyForUpdate(command.orderKey)
         val order = if (existingOrder != null) {
             require(existingOrder.companySeq == command.companySeq && existingOrder.totalPrice == command.totalPrice) {
                 "Order key is already associated with a different order"
@@ -30,21 +28,27 @@ class PaymentWorkflowService(
             val orderId = orderService.createPendingOrder(command.orderKey, command.companySeq, command.totalPrice, command.items)
             orderService.findById(orderId) ?: error("Created order not found: $orderId")
         }
+
+        val pending = paymentTransactionService.findPendingByOrderSeq(order.id!!)
+        if (pending != null) {
+            return PrepareBillingPaymentResult.AlreadyPending(order.id!!, command.orderKey, pending.paymentKey, pending.status, pending.tid)
+        }
+
         val moid = command.paymentKey
         val paymentTransactionId = paymentTransactionService.createPending(command.paymentKey, order.id!!, moid, command.totalPrice)
         val billingKey = companyBillingKeyRepository.findByCompanySeqAndPaymentSystem(command.companySeq, PaymentSystem.TOSS)
             ?: throw IllegalArgumentException("Toss billing key not found for company: ${command.companySeq}")
-        return PrepareBillingPaymentResult(order.id!!, paymentTransactionId, command.orderKey, command.paymentKey, billingKey.billingKey, billingKey.customerKey, moid, command.orderName, command.totalPrice)
+        return PrepareBillingPaymentResult.Ready(order.id!!, paymentTransactionId, command.orderKey, command.paymentKey, billingKey.billingKey, billingKey.customerKey, moid, command.orderName, command.totalPrice)
     }
 
     @Transactional
-    fun complete(prepared: PrepareBillingPaymentResult, result: TossBillingPaymentResult) {
+    fun complete(prepared: PrepareBillingPaymentResult.Ready, result: TossBillingPaymentResult) {
         paymentTransactionService.complete(prepared.paymentTransactionId, result.tid)
         orderService.markPaid(prepared.orderId)
     }
 
     @Transactional
-    fun fail(prepared: PrepareBillingPaymentResult) {
+    fun fail(prepared: PrepareBillingPaymentResult.Ready) {
         paymentTransactionService.fail(prepared.paymentTransactionId)
         orderService.markPaymentFailed(prepared.orderId)
     }

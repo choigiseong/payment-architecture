@@ -8,6 +8,7 @@ import com.coco.payment.service.OrderService
 import com.coco.payment.service.PaymentWorkflowService
 import com.coco.payment.service.dto.BillingPaymentCommand
 import com.coco.payment.service.dto.BillingPaymentResult
+import com.coco.payment.service.dto.PrepareBillingPaymentResult
 import com.coco.payment.handler.paymentgateway.dto.PaymentResult
 import org.springframework.stereotype.Service
 
@@ -20,7 +21,6 @@ class BillingPaymentFacade(
     fun pay(command: BillingPaymentCommand): BillingPaymentResult {
         val existingTransaction = paymentWorkflowService.findByPaymentKey(command.paymentKey)
         if (existingTransaction != null) {
-            // TODO: 동일 주문에 이미 PENDING 거래가 있으면 신규 결제를 제한하는 정책을 추가한다.
             val order = orderService.findById(existingTransaction.orderSeq)
                 ?: throw IllegalStateException("Order not found for payment transaction: ${existingTransaction.id}")
             return BillingPaymentResult(
@@ -35,22 +35,29 @@ class BillingPaymentFacade(
         }
 
         val prepared = paymentWorkflowService.prepare(command)
-        val result = tossBillingPaymentHandler.approve(
-            TossBillingPaymentCommand(prepared.billingKey, prepared.customerKey, prepared.moid, prepared.orderName, prepared.amount)
+        if (prepared is PrepareBillingPaymentResult.AlreadyPending) {
+            val order = orderService.findById(prepared.orderId)
+                ?: throw IllegalStateException("Order not found for payment transaction with paymentKey: ${prepared.paymentKey}")
+            return BillingPaymentResult(order.orderKey, prepared.paymentKey, order.status, prepared.status, prepared.tid, null, null)
+        }
+        val result = prepared as PrepareBillingPaymentResult.Ready
+
+        val approveResult = tossBillingPaymentHandler.approve(
+            TossBillingPaymentCommand(result.billingKey, result.customerKey, result.moid, result.orderName, result.amount)
         )
 
-        return when (result) {
+        return when (approveResult) {
             is PaymentResult.Success -> {
-                paymentWorkflowService.complete(prepared, result.value)
-                BillingPaymentResult(prepared.orderKey, prepared.paymentKey, OrderStatus.PAID, PaymentTransactionStatus.SUCCESS, result.value.tid, null, null)
+                paymentWorkflowService.complete(result, approveResult.value)
+                BillingPaymentResult(result.orderKey, result.paymentKey, OrderStatus.PAID, PaymentTransactionStatus.SUCCESS, approveResult.value.tid, null, null)
             }
             is PaymentResult.Failure -> {
-                paymentWorkflowService.fail(prepared)
-                BillingPaymentResult(prepared.orderKey, prepared.paymentKey, OrderStatus.PAYMENT_FAILED, PaymentTransactionStatus.FAILED, null, result.error.code, result.error.message)
+                paymentWorkflowService.fail(result)
+                BillingPaymentResult(result.orderKey, result.paymentKey, OrderStatus.PAYMENT_FAILED, PaymentTransactionStatus.FAILED, null, approveResult.error.code, approveResult.error.message)
             }
             is PaymentResult.Unknown -> {
-                paymentWorkflowService.fail(prepared)
-                BillingPaymentResult(prepared.orderKey, prepared.paymentKey, OrderStatus.PAYMENT_FAILED, PaymentTransactionStatus.FAILED, null, result.error.code, result.error.message)
+                paymentWorkflowService.fail(result)
+                BillingPaymentResult(result.orderKey, result.paymentKey, OrderStatus.PAYMENT_FAILED, PaymentTransactionStatus.FAILED, null, approveResult.error.code, approveResult.error.message)
             }
         }
     }

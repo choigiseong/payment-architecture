@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional
 @Service
 class OrderService(private val orderRepository: OrderRepository, private val orderItemRepository: OrderItemRepository) {
     fun findByOrderKey(orderKey: String) = orderRepository.findByOrderKey(orderKey)
+    fun findByOrderKeyForUpdate(orderKey: String) = orderRepository.findByOrderKeyForUpdate(orderKey)
     fun findById(orderId: Long) = orderRepository.findById(orderId)
 
     fun createPendingOrder(orderKey: String, companySeq: Long, totalPrice: Long, items: List<BillingOrderItem>): Long {

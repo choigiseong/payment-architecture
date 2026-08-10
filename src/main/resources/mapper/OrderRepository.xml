@@ -29,6 +29,13 @@
         WHERE r.order_key = #{orderKey}
     </select>
 
+    <select id="findByOrderKeyForUpdate" resultType="order">
+        SELECT <include refid="orderColumns" />
+        FROM "order" AS r
+        WHERE r.order_key = #{orderKey}
+        FOR UPDATE
+    </select>
+
     <update id="mark">
         UPDATE "order"
         SET status = #{toStatus}

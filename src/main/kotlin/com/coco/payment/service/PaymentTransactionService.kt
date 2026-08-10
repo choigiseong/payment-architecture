@@ -10,6 +10,9 @@ import org.springframework.transaction.annotation.Transactional
 class PaymentTransactionService(private val paymentTransactionRepository: PaymentTransactionRepository) {
     fun findByPaymentKey(paymentKey: String) = paymentTransactionRepository.findByPaymentKey(paymentKey)
 
+    fun findPendingByOrderSeq(orderSeq: Long) =
+        paymentTransactionRepository.findByOrderSeqAndStatus(orderSeq, PaymentTransactionStatus.PENDING)
+
     @Transactional
     fun createPending(paymentKey: String, orderId: Long, moid: String, amount: Long): Long {
         val transaction = PaymentTransaction(null, paymentKey, orderId, moid, null, amount, PaymentTransactionStatus.PENDING, null, null)

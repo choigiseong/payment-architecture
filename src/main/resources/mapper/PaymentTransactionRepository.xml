@@ -31,6 +31,13 @@
         WHERE r.payment_key = #{paymentKey}
     </select>
 
+    <select id="findByOrderSeqAndStatus" resultType="payment_transaction">
+        SELECT <include refid="paymentTransactionColumns" />
+        FROM payment_transaction AS r
+        WHERE r.order_seq = #{orderSeq}
+          AND r.status = #{status}
+    </select>
+
     <update id="mark">
         UPDATE payment_transaction
         SET tid = #{tid},
