@@ -9,7 +9,6 @@
     <div class="total-row"><span>합계</span><span id="checkout-total">0원</span></div>
 </div>
 <button type="button" id="pay-button" class="btn btn-primary btn-block" onclick="pay()">결제</button>
-<p id="pay-error" class="muted" style="color: var(--danger); display:none"></p>
 
 <script>
     function renderSummary() {
@@ -39,21 +38,22 @@
             items: cart.map(line => ({ itemName: line.name, unitPrice: line.price, quantity: line.quantity })),
         };
         document.getElementById("pay-button").disabled = true;
-        document.getElementById("pay-error").style.display = "none";
         fetchWithTimeout("/api/payments", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),
         }, 35000)
             .then(() => {
+                // 서버 응답을 정상적으로 받은 경우: 결제는 실제로 접수됐으므로 장바구니를 비운다.
                 clearCart();
-                window.location.href = `/checkout/result?paymentKey=${encodeURIComponent(paymentKey)}`;
             })
             .catch(() => {
-                document.getElementById("pay-button").disabled = false;
-                const error = document.getElementById("pay-error");
-                error.textContent = "네트워크 오류로 결제 요청을 보내지 못했습니다. 다시 시도해 주세요.";
-                error.style.display = "block";
+                // 타임아웃/네트워크 오류: 요청이 서버에 도달했는지도 알 수 없으므로 장바구니는
+                // 그대로 둔다(재시도 시 같은 orderKey로 이어지도록). 서버는 받았다면 계속
+                // 처리를 이어가므로, 결과 페이지에서 폴링하며 실제 상태를 확인한다.
+            })
+            .finally(() => {
+                window.location.href = `/checkout/result?paymentKey=${encodeURIComponent(paymentKey)}`;
             });
     }
 
