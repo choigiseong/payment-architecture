@@ -2,6 +2,7 @@ package com.coco.payment.service
 
 import com.coco.payment.service.dto.BillingPaymentCommand
 import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingPaymentResult
+import com.coco.payment.persistence.enumerator.OrderStatus
 import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.persistence.repository.CompanyBillingKeyRepository
 import com.coco.payment.service.dto.PrepareBillingPaymentResult
@@ -32,6 +33,10 @@ class PaymentWorkflowService(
             val orderId = orderService.createPendingOrder(command.orderKey, command.companySeq, command.totalPrice, command.items)
             orderService.findById(orderId) ?: error("Created order not found: $orderId")
         }
+
+        // PENDING 거래가 없어도 주문 자체가 이미 결제 완료일 수 있다(예: 폴링이 끝난 뒤 재처리가 확정한 경우).
+        // 이때 같은 orderKey로 다시 들어오면 중복 승인이 되므로 주문 상태로 막는다.
+        require(order.status != OrderStatus.PAID) { "Order is already paid: ${command.orderKey}" }
 
         val pending = paymentTransactionService.findPendingByOrderSeq(order.id!!)
         if (pending != null) {
