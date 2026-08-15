@@ -57,10 +57,11 @@ class PaymentWorkflowService(
         orderService.markPaid(prepared.orderId)
     }
 
+    // 실패는 "이번 시도"의 결과일 뿐 주문의 종료 상태가 아니다. 같은 orderKey로 재시도할 수 있으므로
+    // 주문은 결제될 때까지 PENDING_PAYMENT로 두고, 시도별 결과는 payment_transaction에만 남긴다.
     @Transactional
     fun fail(prepared: PrepareBillingPaymentResult.Ready) {
         paymentTransactionService.fail(prepared.paymentTransactionId)
-        orderService.markPaymentFailed(prepared.orderId)
     }
 
     @Transactional
@@ -73,9 +74,6 @@ class PaymentWorkflowService(
 
     @Transactional
     fun failByTransactionId(paymentTransactionId: Long) {
-        val transaction = paymentTransactionService.findById(paymentTransactionId)
-            ?: error("Payment transaction not found: $paymentTransactionId")
         paymentTransactionService.fail(paymentTransactionId)
-        orderService.markPaymentFailed(transaction.orderSeq)
     }
 }

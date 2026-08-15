@@ -53,7 +53,8 @@ class BillingPaymentFacade(
             }
             is PaymentResult.Failure -> {
                 paymentWorkflowService.fail(result)
-                BillingPaymentResult(result.orderKey, result.paymentKey, OrderStatus.PAYMENT_FAILED, PaymentTransactionStatus.FAILED, null, approveResult.error.code, approveResult.error.message)
+                // 이번 시도만 실패했을 뿐 주문은 아직 미결제 상태다(같은 orderKey로 재시도 가능).
+                BillingPaymentResult(result.orderKey, result.paymentKey, OrderStatus.PENDING_PAYMENT, PaymentTransactionStatus.FAILED, null, approveResult.error.code, approveResult.error.message)
             }
             is PaymentResult.Unknown ->
                 BillingPaymentResult(result.orderKey, result.paymentKey, OrderStatus.PENDING_PAYMENT, PaymentTransactionStatus.PENDING, null, approveResult.error.code, approveResult.error.message)

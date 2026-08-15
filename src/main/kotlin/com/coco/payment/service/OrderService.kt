@@ -30,9 +30,4 @@ class OrderService(private val orderRepository: OrderRepository, private val ord
     fun markPaid(orderId: Long) {
         check(orderRepository.mark(orderId, OrderStatus.PENDING_PAYMENT, OrderStatus.PAID) == 1) { "Failed to mark order as paid" }
     }
-
-    @Transactional
-    fun markPaymentFailed(orderId: Long) {
-        check(orderRepository.mark(orderId, OrderStatus.PENDING_PAYMENT, OrderStatus.PAYMENT_FAILED) == 1) { "Failed to mark order as failed" }
-    }
 }
