@@ -2,6 +2,7 @@ package com.coco.payment.service
 
 import com.coco.payment.service.dto.BillingPaymentCommand
 import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingPaymentResult
+import com.coco.payment.persistence.enumerator.OrderStatus
 import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.persistence.repository.CompanyBillingKeyRepository
 import com.coco.payment.service.dto.PrepareBillingPaymentResult
@@ -33,6 +34,10 @@ class PaymentWorkflowService(
             orderService.findById(orderId) ?: error("Created order not found: $orderId")
         }
 
+        // PENDING 거래가 없어도 주문 자체가 이미 결제 완료일 수 있다(예: 폴링이 끝난 뒤 재처리가 확정한 경우).
+        // 이때 같은 orderKey로 다시 들어오면 중복 승인이 되므로 주문 상태로 막는다.
+        require(order.status != OrderStatus.PAID) { "Order is already paid: ${command.orderKey}" }
+
         val pending = paymentTransactionService.findPendingByOrderSeq(order.id!!)
         if (pending != null) {
             return PrepareBillingPaymentResult.AlreadyPending(order.id!!, command.orderKey, pending.paymentKey, pending.status, pending.tid)
@@ -52,10 +57,11 @@ class PaymentWorkflowService(
         orderService.markPaid(prepared.orderId)
     }
 
+    // 실패는 "이번 시도"의 결과일 뿐 주문의 종료 상태가 아니다. 같은 orderKey로 재시도할 수 있으므로
+    // 주문은 결제될 때까지 PENDING_PAYMENT로 두고, 시도별 결과는 payment_transaction에만 남긴다.
     @Transactional
     fun fail(prepared: PrepareBillingPaymentResult.Ready) {
         paymentTransactionService.fail(prepared.paymentTransactionId)
-        orderService.markPaymentFailed(prepared.orderId)
     }
 
     @Transactional
@@ -68,9 +74,6 @@ class PaymentWorkflowService(
 
     @Transactional
     fun failByTransactionId(paymentTransactionId: Long) {
-        val transaction = paymentTransactionService.findById(paymentTransactionId)
-            ?: error("Payment transaction not found: $paymentTransactionId")
         paymentTransactionService.fail(paymentTransactionId)
-        orderService.markPaymentFailed(transaction.orderSeq)
     }
 }

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head">
+    <meta charset="UTF-8"/>
+    <title>Shop</title>
+    <style>
+        :root {
+            --brand: #4f46e5;
+            --brand-dark: #4338ca;
+            --ink: #1f2430;
+            --muted: #6b7280;
+            --border: #e5e7eb;
+            --bg: #f7f7fb;
+            --surface: #ffffff;
+            --danger: #dc2626;
+            --danger-bg: #fee2e2;
+            --success: #16a34a;
+            --success-bg: #dcfce7;
+            --pending: #b45309;
+            --pending-bg: #fef3c7;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: "Segoe UI", "Apple SD Gothic Neo", Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--ink);
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 32px 20px 80px;
+        }
+
+        h1 { font-size: 1.5rem; margin: 8px 0 20px; }
+
+        nav {
+            display: flex;
+            gap: 20px;
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        nav a {
+            color: var(--muted);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        nav a:hover { color: var(--brand); }
+
+        .btn {
+            display: inline-block;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.15s ease;
+        }
+
+        .btn:hover { opacity: 0.85; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .btn-primary { background: var(--brand); color: #fff; }
+        .btn-danger { background: var(--danger-bg); color: var(--danger); }
+
+        .btn-block {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            font-size: 1rem;
+            margin-top: 12px;
+        }
+
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 14px;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .product-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+        }
+
+        .product-name { font-weight: 600; }
+        .product-price { color: var(--muted); font-size: 0.9rem; }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); }
+        th { color: var(--muted); font-size: 0.85rem; font-weight: 600; }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            font-weight: 700;
+            font-size: 1.05rem;
+            padding: 14px 0;
+        }
+
+        .summary-list { list-style: none; padding: 0; margin: 0 0 12px; }
+        .summary-list li { padding: 6px 0; border-bottom: 1px solid var(--border); }
+
+        .status-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .status-PAID, .status-SUCCESS { background: var(--success-bg); color: var(--success); }
+        .status-PAYMENT_FAILED, .status-FAILED { background: var(--danger-bg); color: var(--danger); }
+        .status-PENDING_PAYMENT, .status-PENDING { background: var(--pending-bg); color: var(--pending); }
+
+        .result-card p { margin: 6px 0; }
+        .muted { color: var(--muted); font-size: 0.9rem; }
+        .empty { color: var(--muted); padding: 24px 0; text-align: center; }
+
+        .toast {
+            position: fixed;
+            left: 50%;
+            bottom: 32px;
+            transform: translateX(-50%) translateY(8px);
+            padding: 12px 20px;
+            border-radius: 8px;
+            background: var(--ink);
+            color: #fff;
+            font-size: 0.95rem;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            z-index: 100;
+        }
+
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    </style>
+    <script src="/js/cart.js"></script>
+</head>
+<body>
+<nav th:fragment="nav">
+    <a href="/shop">상품 목록</a> | <a href="/cart">장바구니</a>
+</nav>
+</body>
+</html>

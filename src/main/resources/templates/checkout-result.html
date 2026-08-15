@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav}"></nav>
+<h1>결제 결과</h1>
+<div id="result" class="card result-card" style="display:none"></div>
+<p><a href="/shop">상품 목록으로</a></p>
+
+<script>
+    const paymentKey = new URLSearchParams(window.location.search).get("paymentKey");
+
+    function loadResult() {
+        if (!paymentKey) {
+            // 조회할 키가 없으면 폴링해봐야 계속 404다. 바로 안내하고 끝낸다.
+            showNotFoundNotice();
+            return;
+        }
+        fetchPaymentStatus(paymentKey)
+            .then(result => {
+                if (!result) {
+                    // 거래가 아직 안 보일 수 있다(커밋 전 레이스). 폴링으로 재확인한다.
+                    showCheckingNotice();
+                    startPolling(paymentKey);
+                    return;
+                }
+                showResult(result);
+                if (result.paymentStatus === "PENDING") {
+                    startPolling(paymentKey);
+                }
+            })
+            .catch(() => {
+                showCheckingNotice();
+                startPolling(paymentKey);
+            });
+    }
+
+    loadResult();
+</script>
+</body>
+</html>

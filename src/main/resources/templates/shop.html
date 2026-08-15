@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav}"></nav>
+<h1>상품 목록</h1>
+<ul class="product-grid">
+    <li class="product-card" th:each="product : ${products}">
+        <span class="product-name" th:text="${product.name}"></span>
+        <span class="product-price" th:text="${product.price} + '원'"></span>
+        <button type="button" class="btn btn-primary"
+                th:attr="onclick=|addToCart(${product.id}, '${product.name}', ${product.price})|">
+            담기
+        </button>
+    </li>
+</ul>
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav}"></nav>
+<h1>결제</h1>
+<div class="card">
+    <ul id="checkout-lines" class="summary-list"></ul>
+    <div class="total-row"><span>합계</span><span id="checkout-total">0원</span></div>
+</div>
+<button type="button" id="pay-button" class="btn btn-primary btn-block" onclick="pay()">결제</button>
+<p id="pay-error" class="muted" style="color: var(--danger); display:none"></p>
+
+<script>
+    function renderSummary() {
+        const cart = getCart();
+        document.getElementById("checkout-lines").innerHTML = cart.map(line =>
+            `<li>${line.name} x ${line.quantity} = ${line.price * line.quantity}원</li>`
+        ).join("");
+        document.getElementById("checkout-total").textContent = cartTotal(cart) + "원";
+    }
+
+    function showPayError(message) {
+        document.getElementById("pay-button").disabled = false;
+        const error = document.getElementById("pay-error");
+        error.textContent = message;
+        error.style.display = "block";
+    }
+
+    function goResult(paymentKey) {
+        window.location.href = `/checkout/result?paymentKey=${encodeURIComponent(paymentKey)}`;
+    }
+
+    function pay() {
+        const cart = getCart();
+        if (cart.length === 0) {
+            alert("장바구니가 비어 있습니다");
+            return;
+        }
+        if (!confirm(`총 ${cartTotal(cart)}원을 결제하시겠습니까?`)) {
+            return;
+        }
+        const paymentKey = crypto.randomUUID();
+        const body = {
+            companySeq: COMPANY_SEQ,
+            orderKey: getOrderKey(),
+            paymentKey: paymentKey,
+            orderName: "장바구니 결제",
+            totalPrice: cartTotal(cart),
+            items: cart.map(line => ({ itemName: line.name, unitPrice: line.price, quantity: line.quantity })),
+        };
+        document.getElementById("pay-button").disabled = true;
+        document.getElementById("pay-error").style.display = "none";
+        fetchWithTimeout("/api/payments", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+        }, 35000)
+            .then(res => (res.ok ? res.json() : null))
+            .then(result => {
+                if (!result) {
+                    // 서버가 오류를 반환했다. Toss 호출 전에 끊겼으므로 청구는 일어나지 않았다.
+                    // 장바구니와 orderKey를 유지해 이 화면에서 바로 재시도할 수 있게 한다.
+                    showPayError("결제 요청을 처리하지 못했습니다. 다시 시도해 주세요.");
+                    return;
+                }
+                if (result.paymentStatus === "FAILED") {
+                    // 서버가 확정한 실패. 장바구니와 orderKey를 유지해 바로 재시도할 수 있게 한다.
+                    showPayError(result.message ?? "결제에 실패했습니다.");
+                    return;
+                }
+                if (result.paymentStatus === "SUCCESS") {
+                    clearCart();
+                }
+                // 성공이거나 아직 미확정(PENDING)이면 결과 페이지에서 확인한다.
+                // 이미 진행 중인 거래가 있으면 서버가 그 거래의 paymentKey를 돌려주므로,
+                // 방금 만든 키가 아니라 응답의 키로 조회해야 한다.
+                goResult(result.paymentKey ?? paymentKey);
+            })
+            .catch(() => {
+                // 타임아웃/네트워크 오류: 접수 여부를 알 수 없으므로 장바구니는 그대로 두고
+                // 결과 페이지에서 폴링하며 실제 상태를 확인한다.
+                goResult(paymentKey);
+            });
+    }
+
+    renderSummary();
+</script>
+</body>
+</html>
