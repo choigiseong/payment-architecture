@@ -135,6 +135,25 @@
         .result-card p { margin: 6px 0; }
         .muted { color: var(--muted); font-size: 0.9rem; }
         .empty { color: var(--muted); padding: 24px 0; text-align: center; }
+
+        .toast {
+            position: fixed;
+            left: 50%;
+            bottom: 32px;
+            transform: translateX(-50%) translateY(8px);
+            padding: 12px 20px;
+            border-radius: 8px;
+            background: var(--ink);
+            color: #fff;
+            font-size: 0.95rem;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            z-index: 100;
+        }
+
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     </style>
     <script src="/js/cart.js"></script>
 </head>

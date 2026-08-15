@@ -1,6 +1,25 @@
 const CART_KEY = "cart";
 const ORDER_KEY_KEY = "orderKey";
 const COMPANY_SEQ = 1; // 하드코딩된 단일 회사
+const TOAST_DURATION_MS = 1800;
+let toastTimer = null;
+
+function showToast(message) {
+    let toast = document.getElementById("toast");
+    if (!toast) {
+        toast = document.createElement("div");
+        toast.id = "toast";
+        toast.className = "toast";
+        document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    // 연속으로 담을 때도 전환이 다시 시작되도록 클래스를 뗀 뒤 리플로우를 강제한다.
+    toast.classList.remove("show");
+    void toast.offsetWidth;
+    toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove("show"), TOAST_DURATION_MS);
+}
 
 function getCart() {
     return JSON.parse(localStorage.getItem(CART_KEY) || "[]");
@@ -20,6 +39,7 @@ function addToCart(productId, name, price) {
         cart.push({ productId, name, price, quantity: 1 });
     }
     saveCart(cart);
+    showToast(`${name} 담았습니다`);
 }
 
 function removeFromCart(productId) {
