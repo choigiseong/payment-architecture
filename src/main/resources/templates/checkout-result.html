@@ -11,6 +11,11 @@
     const paymentKey = new URLSearchParams(window.location.search).get("paymentKey");
 
     function loadResult() {
+        if (!paymentKey) {
+            // 조회할 키가 없으면 폴링해봐야 계속 404다. 바로 안내하고 끝낸다.
+            showNotFoundNotice();
+            return;
+        }
         fetchPaymentStatus(paymentKey)
             .then(result => {
                 if (!result) {
