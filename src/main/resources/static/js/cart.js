@@ -82,6 +82,12 @@ function showNotFoundNotice() {
     box.innerHTML = `<p class="muted">결제 정보를 찾을 수 없습니다.</p>`;
 }
 
+function showCheckingNotice() {
+    const box = document.getElementById("result");
+    box.style.display = "block";
+    box.innerHTML = `<p class="muted">결제 상태를 확인하고 있습니다…</p>`;
+}
+
 function showPollingTimeoutNotice() {
     document.getElementById("result").innerHTML += `<p class="muted">확인이 지연되고 있습니다. 잠시 후 새로고침해 주세요.</p>`;
 }
@@ -102,11 +108,11 @@ function schedulePoll(paymentKey, delay) {
     setTimeout(() => pollOnce(paymentKey, delay), delay);
 }
 
-// 다음 폴링을 이어가거나, 총 폴링 시간이 다 됐으면 멈춘다. 정상 응답의 PENDING과
-// 타임아웃/네트워크 오류를 동일하게 "아직 모름"으로 취급해 같은 방식으로 재시도한다.
-function continuePollingOrTimeout(paymentKey, currentDelay) {
+// PENDING, 네트워크 오류, 404를 모두 "아직 확정 못 함"으로 보고 같은 방식으로 재시도한다.
+// 총 폴링 시간이 다 되면 onTimeout으로 상황에 맞는 최종 안내를 보여준다.
+function continuePolling(paymentKey, currentDelay, onTimeout) {
     if (Date.now() - pollStartedAt >= POLL_MAX_DURATION_MS) {
-        showPollingTimeoutNotice();
+        onTimeout();
         return;
     }
     schedulePoll(paymentKey, Math.min(currentDelay * 2, POLL_MAX_DELAY_MS));
@@ -116,14 +122,14 @@ function pollOnce(paymentKey, currentDelay) {
     fetchPaymentStatus(paymentKey)
         .then(result => {
             if (!result) {
-                showNotFoundNotice();
+                continuePolling(paymentKey, currentDelay, showNotFoundNotice);
                 return;
             }
             showResult(result);
             if (result.paymentStatus !== "PENDING") {
                 return;
             }
-            continuePollingOrTimeout(paymentKey, currentDelay);
+            continuePolling(paymentKey, currentDelay, showPollingTimeoutNotice);
         })
-        .catch(() => continuePollingOrTimeout(paymentKey, currentDelay));
+        .catch(() => continuePolling(paymentKey, currentDelay, showPollingTimeoutNotice));
 }

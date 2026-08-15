@@ -11,16 +11,23 @@
     const paymentKey = new URLSearchParams(window.location.search).get("paymentKey");
 
     function loadResult() {
-        fetchPaymentStatus(paymentKey).then(result => {
-            if (!result) {
-                showNotFoundNotice();
-                return;
-            }
-            showResult(result);
-            if (result.paymentStatus === "PENDING") {
+        fetchPaymentStatus(paymentKey)
+            .then(result => {
+                if (!result) {
+                    // 거래가 아직 안 보일 수 있다(커밋 전 레이스). 폴링으로 재확인한다.
+                    showCheckingNotice();
+                    startPolling(paymentKey);
+                    return;
+                }
+                showResult(result);
+                if (result.paymentStatus === "PENDING") {
+                    startPolling(paymentKey);
+                }
+            })
+            .catch(() => {
+                showCheckingNotice();
                 startPolling(paymentKey);
-            }
-        });
+            });
     }
 
     loadResult();
