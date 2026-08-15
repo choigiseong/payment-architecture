@@ -73,7 +73,9 @@
                     clearCart();
                 }
                 // 성공이거나 아직 미확정(PENDING)이면 결과 페이지에서 확인한다.
-                goResult(paymentKey);
+                // 이미 진행 중인 거래가 있으면 서버가 그 거래의 paymentKey를 돌려주므로,
+                // 방금 만든 키가 아니라 응답의 키로 조회해야 한다.
+                goResult(result.paymentKey ?? paymentKey);
             })
             .catch(() => {
                 // 타임아웃/네트워크 오류: 접수 여부를 알 수 없으므로 장바구니는 그대로 두고
