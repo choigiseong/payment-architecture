@@ -12,4 +12,6 @@ object ProductCatalog {
     )
 
     fun all(): List<Product> = products
+
+    fun findById(id: Long): Product? = products.find { it.id == id }
 }

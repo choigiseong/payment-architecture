@@ -47,7 +47,7 @@
             paymentKey: paymentKey,
             orderName: "장바구니 결제",
             totalPrice: cartTotal(cart),
-            items: cart.map(line => ({ itemName: line.name, unitPrice: line.price, quantity: line.quantity })),
+            items: cart.map(line => ({ productId: line.productId, quantity: line.quantity })),
         };
         document.getElementById("pay-button").disabled = true;
         document.getElementById("pay-error").style.display = "none";
