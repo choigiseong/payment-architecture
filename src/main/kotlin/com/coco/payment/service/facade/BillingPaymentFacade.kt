@@ -42,6 +42,10 @@ class BillingPaymentFacade(
         }
         val result = prepared as PrepareBillingPaymentResult.Ready
 
+        // TODO: 여기서 Toss 승인을 동기로 기다린다(요청 스레드 점유). PG 지연 시 스레드 풀 고갈이
+        //  문제가 되는 규모가 되면 네이버식으로 전환한다 — 접수(prepare)까지만 하고 즉시 응답,
+        //  승인은 워커가 비동기 처리, 클라이언트는 처음부터 결과 페이지 폴링으로 확정.
+        //  결과 페이지/지수 백오프 폴링/PENDING 재처리 스케줄러는 그대로 재사용 가능하다.
         val approveResult = tossBillingPaymentHandler.approve(
             TossBillingPaymentCommand(result.billingKey, result.customerKey, result.moid, result.orderName, result.amount)
         )
