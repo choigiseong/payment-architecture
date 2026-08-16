@@ -52,6 +52,13 @@ class BillingPaymentFacade(
 
         return when (approveResult) {
             is PaymentResult.Success -> {
+                // TODO: complete()가 실패하면 예외가 그대로 올라가 500이 나가고, 클라이언트는
+                //  "다시 시도해 주세요"를 띄운다. 승인은 이미 성공해 돈이 빠져나간 뒤라 최악의 안내다.
+                //  승인 전 실패(돈 안 나감, 재시도가 맞음)와 승인 후 실패(돈 나감, 확인으로 보내야 함)를
+                //  구분해야 한다. 후자는 Unknown과 같이 PENDING 응답으로 결과 페이지에 보내는 편이 맞다.
+                //  불확실한 Unknown은 폴링시키면서 성공을 확인한 이 경로를 더 나쁘게 다루고 있다.
+                //  받아둔 tid도 롤백과 함께 버려진다. 스케줄러가 inquiry로 되찾지만, 그때 Toss가 계속
+                //  안 잡히면 30분 뒤 실패로 확정돼 Toss는 성공인데 우리 DB만 FAILED가 된다.
                 paymentWorkflowService.complete(result, approveResult.value)
                 BillingPaymentResult(result.orderKey, result.paymentKey, OrderStatus.PAID, PaymentTransactionStatus.SUCCESS, approveResult.value.tid, null, null)
             }
