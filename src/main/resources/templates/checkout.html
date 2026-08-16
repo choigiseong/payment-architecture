@@ -19,18 +19,23 @@
 
     function loadPreview() {
         const cart = getCart();
+        if (cart.length === 0) {
+            showPayError("장바구니가 비어 있습니다.");
+            return Promise.resolve();
+        }
         return fetchWithTimeout("/api/checkout/preview", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ items: cart.map(line => ({ productId: line.productId, quantity: line.quantity })) }),
         }, 10000)
-            .then(res => (res.ok ? res.json() : null))
+            .then(res => (res.ok ? res.json() : Promise.reject()))
             .then(result => {
-                if (result) {
-                    preview = result;
-                    renderPreview();
-                }
-            });
+                preview = result;
+                renderPreview();
+            })
+            // 서버 오류든 타임아웃이든 화면은 빈 채로 남는다. 이유를 알리지 않으면
+            // 사용자는 장바구니가 비었다고 오해하고 복구할 방법도 없다.
+            .catch(() => showPayError("주문 정보를 불러오지 못했습니다. 새로고침해 주세요."));
     }
 
     function renderPreview() {
@@ -54,8 +59,8 @@
     }
 
     function pay() {
-        if (preview === null || preview.items.length === 0) {
-            alert("장바구니가 비어 있습니다");
+        if (preview === null) {
+            showPayError("주문 정보를 불러오지 못했습니다. 새로고침해 주세요.");
             return;
         }
         if (!confirm(`총 ${preview.totalPrice}원을 결제하시겠습니까?`)) {
