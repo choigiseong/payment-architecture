@@ -1,7 +1,7 @@
 package com.coco.payment.controller.dto
 
-import com.coco.payment.service.dto.BillingOrderItem
 import com.coco.payment.service.dto.BillingPaymentCommand
+import com.coco.payment.service.dto.BillingPaymentItem
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
@@ -20,11 +20,10 @@ data class BillingPaymentRequest(
     @field:Valid
     val items: List<BillingPaymentItemRequest>,
 ) {
-    fun toCommand() = BillingPaymentCommand.of(companySeq, orderKey, paymentKey, orderName, totalPrice, items.map { BillingOrderItem(it.itemName, it.unitPrice, it.quantity) })
+    fun toCommand() = BillingPaymentCommand.of(companySeq, orderKey, paymentKey, orderName, totalPrice, items.map { BillingPaymentItem(it.productId, it.quantity) })
 }
 
 data class BillingPaymentItemRequest(
-    @field:NotBlank val itemName: String,
-    @field:Positive val unitPrice: Long,
+    @field:Positive val productId: Long,
     @field:Positive val quantity: Int,
 )

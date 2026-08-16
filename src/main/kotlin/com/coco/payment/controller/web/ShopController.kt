@@ -1,15 +1,15 @@
 package com.coco.payment.controller.web
 
-import com.coco.payment.catalog.ProductCatalog
+import com.coco.payment.service.ProductService
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
 
 @Controller
-class ShopController {
+class ShopController(private val productService: ProductService) {
     @GetMapping("/shop")
     fun shop(model: Model): String {
-        model.addAttribute("products", ProductCatalog.all())
+        model.addAttribute("products", productService.findAll())
         return "shop"
     }
 

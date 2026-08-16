@@ -10,14 +10,37 @@ import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientException
 
 @Component
-class TossBillingPaymentHandler(
+class TossPaymentHandler(
     private val tossRestClient: RestClient,
     @Value("\${payment.toss.secret-key}")
     private val secretKey: String,
 ) {
-    fun approve(command: TossBillingPaymentCommand): PaymentResult<TossBillingPaymentResult> {
-        require(secretKey.isNotBlank()) { "TOSS_SECRET_KEY must be configured" }
+    // 설정 누락은 결제 시점이 아니라 기동 시점에 드러나야 한다.
+    init {
+        check(secretKey.isNotBlank()) { "TOSS_SECRET_KEY must be configured" }
+    }
 
+    // 발급은 돈이 움직이지 않아 "불확실"이라는 상태가 없다. 그래서 승인/조회와 달리
+    // PaymentResult로 감싸지 않고 실패하면 예외를 던진다.
+    fun issue(customerKey: String, authKey: String): String {
+        val response = tossRestClient.post()
+            .uri("/v1/billing/authorizations/issue")
+            .headers { headers -> headers.setBasicAuth(secretKey, "") }
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(TossBillingKeyIssueRequest(customerKey, authKey))
+            .retrieve()
+            .onStatus({ status -> status.isError }) { _, clientResponse ->
+                throw TossPaymentException(
+                    code = clientResponse.statusCode.value().toString(),
+                    message = "Toss billing key issue failed: ${clientResponse.statusCode}",
+                )
+            }
+            .body(TossBillingKeyIssueResponse::class.java)
+            ?: throw TossPaymentException(null, "Toss billing key issue response is empty")
+        return response.billingKey
+    }
+
+    fun approve(command: TossBillingPaymentCommand): PaymentResult<TossBillingPaymentResult> {
         return try {
             val response = tossRestClient.post()
                 .uri("/v1/billing/{billingKey}", command.billingKey)
@@ -56,8 +79,6 @@ class TossBillingPaymentHandler(
     }
 
     fun inquiry(moid: String): PaymentResult<TossBillingPaymentResult> {
-        require(secretKey.isNotBlank()) { "TOSS_SECRET_KEY must be configured" }
-
         return try {
             val response = tossRestClient.get()
                 .uri("/v1/payments/orders/{orderId}", moid)
@@ -88,6 +109,10 @@ class TossBillingPaymentHandler(
         }
     }
 }
+
+private data class TossBillingKeyIssueRequest(val customerKey: String, val authKey: String)
+
+private data class TossBillingKeyIssueResponse(val billingKey: String, val customerKey: String)
 
 private data class TossBillingPaymentRequest(
     val customerKey: String,

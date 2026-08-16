@@ -7,4 +7,6 @@ interface OrderItemRepository {
     fun insert(orderItem: OrderItem): Int
 
     fun findById(@Param("id") id: Long): OrderItem?
+
+    fun findByOrderSeq(@Param("orderSeq") orderSeq: Long): List<OrderItem>
 }

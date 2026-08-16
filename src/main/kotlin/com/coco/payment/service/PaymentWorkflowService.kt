@@ -1,11 +1,13 @@
 package com.coco.payment.service
 
+import com.coco.payment.service.dto.BillingOrderItem
 import com.coco.payment.service.dto.BillingPaymentCommand
+import com.coco.payment.service.dto.BillingPaymentItem
 import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingPaymentResult
-import com.coco.payment.persistence.enumerator.OrderStatus
 import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.persistence.repository.CompanyBillingKeyRepository
 import com.coco.payment.service.dto.PrepareBillingPaymentResult
+import com.coco.payment.service.exception.OrderAlreadyPaidException
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -15,6 +17,7 @@ import java.time.Instant
 class PaymentWorkflowService(
     private val orderService: OrderService,
     private val paymentTransactionService: PaymentTransactionService,
+    private val productService: ProductService,
     private val companyBillingKeyRepository: CompanyBillingKeyRepository,
     @Value("\${payment.pending-timeout-seconds}")
     private val pendingTimeoutSeconds: Long,
@@ -23,20 +26,27 @@ class PaymentWorkflowService(
 
     @Transactional
     fun prepare(command: BillingPaymentCommand): PrepareBillingPaymentResult {
+        val orderItems = resolveOrderItems(command.items, command.totalPrice)
+
         val existingOrder = orderService.findByOrderKeyForUpdate(command.orderKey)
         val order = if (existingOrder != null) {
             require(existingOrder.companySeq == command.companySeq && existingOrder.totalPrice == command.totalPrice) {
                 "Order key is already associated with a different order"
             }
+            // 합계가 같아도 상품 구성은 다를 수 있다(예: 6500x2 와 5000+3800+4200).
+            // 기존 주문의 항목은 갱신하지 않으므로, 다르면 저장된 내용과 어긋난 채로 승인된다.
+            require(canonicalize(orderService.findItems(existingOrder.id!!)) == canonicalize(orderItems)) {
+                "Order key is already associated with different order items"
+            }
             existingOrder
         } else {
-            val orderId = orderService.createPendingOrder(command.orderKey, command.companySeq, command.totalPrice, command.items)
+            val orderId = orderService.createPendingOrder(command.orderKey, command.companySeq, command.totalPrice, orderItems)
             orderService.findById(orderId) ?: error("Created order not found: $orderId")
         }
 
         // PENDING 거래가 없어도 주문 자체가 이미 결제 완료일 수 있다(예: 폴링이 끝난 뒤 재처리가 확정한 경우).
         // 이때 같은 orderKey로 다시 들어오면 중복 승인이 되므로 주문 상태로 막는다.
-        require(order.status != OrderStatus.PAID) { "Order is already paid: ${command.orderKey}" }
+        if (order.isPaid) throw OrderAlreadyPaidException("이미 결제가 완료된 주문입니다.")
 
         val pending = paymentTransactionService.findPendingByOrderSeq(order.id!!)
         if (pending != null) {
@@ -51,6 +61,26 @@ class PaymentWorkflowService(
         return PrepareBillingPaymentResult.Ready(order.id!!, paymentTransactionId, command.orderKey, command.paymentKey, billingKey.billingKey, billingKey.customerKey, moid, command.orderName, command.totalPrice)
     }
 
+    // 이름과 가격은 클라이언트 값을 받지 않고 서버가 조회한 상품에서 가져온다.
+    // 클라이언트의 totalPrice는 "사용자가 확인한 금액"이므로, 재계산 값과 다르면 승인 전에 거부한다.
+    private fun resolveOrderItems(items: List<BillingPaymentItem>, totalPrice: Long): List<BillingOrderItem> {
+        val productsById = productService.findByIds(items.map { it.productId })
+        val orderItems = items.map { item ->
+            val product = productsById[item.productId]
+                ?: throw IllegalArgumentException("Unknown product: ${item.productId}")
+            BillingOrderItem(product.name, product.price, item.quantity)
+        }
+        val computedTotal = orderItems.sumOf { it.unitPrice * it.quantity }
+        require(computedTotal == totalPrice) {
+            "Total price mismatch: requested $totalPrice but computed $computedTotal"
+        }
+        return orderItems
+    }
+
+    // 순서와 무관하게 비교하기 위한 정렬된 표현.
+    private fun canonicalize(items: List<BillingOrderItem>) =
+        items.map { "${it.itemName}:${it.unitPrice}:${it.quantity}" }.sorted()
+
     @Transactional
     fun complete(prepared: PrepareBillingPaymentResult.Ready, result: TossBillingPaymentResult) {
         paymentTransactionService.complete(prepared.paymentTransactionId, result.tid)
@@ -60,8 +90,8 @@ class PaymentWorkflowService(
     // 실패는 "이번 시도"의 결과일 뿐 주문의 종료 상태가 아니다. 같은 orderKey로 재시도할 수 있으므로
     // 주문은 결제될 때까지 PENDING_PAYMENT로 두고, 시도별 결과는 payment_transaction에만 남긴다.
     @Transactional
-    fun fail(prepared: PrepareBillingPaymentResult.Ready) {
-        paymentTransactionService.fail(prepared.paymentTransactionId)
+    fun fail(prepared: PrepareBillingPaymentResult.Ready, failCode: String?, failMessage: String?) {
+        paymentTransactionService.fail(prepared.paymentTransactionId, failCode, failMessage)
     }
 
     @Transactional
@@ -73,7 +103,7 @@ class PaymentWorkflowService(
     }
 
     @Transactional
-    fun failByTransactionId(paymentTransactionId: Long) {
-        paymentTransactionService.fail(paymentTransactionId)
+    fun failByTransactionId(paymentTransactionId: Long, failCode: String?, failMessage: String?) {
+        paymentTransactionService.fail(paymentTransactionId, failCode, failMessage)
     }
 }

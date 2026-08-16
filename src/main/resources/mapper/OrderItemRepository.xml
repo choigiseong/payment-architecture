@@ -22,4 +22,10 @@
         FROM order_item AS r
         WHERE r.id = #{id}
     </select>
+
+    <select id="findByOrderSeq" resultType="order_item">
+        SELECT <include refid="orderItemColumns" />
+        FROM order_item AS r
+        WHERE r.order_seq = #{orderSeq}
+    </select>
 </mapper>

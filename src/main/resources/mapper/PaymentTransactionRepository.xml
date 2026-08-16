@@ -9,6 +9,8 @@
         r.tid AS tid,
         r.amount AS amount,
         r.status AS status,
+        r.fail_code AS failCode,
+        r.fail_message AS failMessage,
         r.expired_at AS expiredAt,
         r.created_at AS createdAt,
         r.updated_at AS updatedAt
@@ -55,7 +57,9 @@
     <update id="mark">
         UPDATE payment_transaction
         SET tid = #{tid},
-            status = #{toStatus}
+            status = #{toStatus},
+            fail_code = #{failCode},
+            fail_message = #{failMessage}
         WHERE id = #{id}
           AND status = #{fromStatus}
     </update>

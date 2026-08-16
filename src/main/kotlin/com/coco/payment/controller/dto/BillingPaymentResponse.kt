@@ -32,6 +32,8 @@ data class PaymentPollingResponse(
     val orderStatus: OrderStatus,
     val paymentStatus: PaymentTransactionStatus,
     val tid: String?,
+    val code: String?,
+    val message: String?,
 ) {
     companion object {
         fun of(result: BillingPaymentResult) = PaymentPollingResponse(
@@ -40,6 +42,8 @@ data class PaymentPollingResponse(
             result.orderStatus,
             result.paymentStatus,
             result.tid,
+            result.code,
+            result.message,
         )
     }
 }
