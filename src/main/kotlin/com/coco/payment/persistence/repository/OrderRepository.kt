@@ -3,6 +3,7 @@ package com.coco.payment.persistence.repository
 import com.coco.payment.persistence.model.Order
 import com.coco.payment.persistence.enumerator.OrderStatus
 import org.apache.ibatis.annotations.Param
+import java.time.LocalDate
 
 interface OrderRepository {
     fun insert(order: Order): Int
@@ -14,4 +15,6 @@ interface OrderRepository {
     fun findByOrderKeyForUpdate(@Param("orderKey") orderKey: String): Order?
 
     fun mark(@Param("id") id: Long, @Param("fromStatus") fromStatus: OrderStatus, @Param("toStatus") toStatus: OrderStatus): Int
+
+    fun updateDeliveryDate(@Param("id") id: Long, @Param("deliveryDate") deliveryDate: LocalDate): Int
 }

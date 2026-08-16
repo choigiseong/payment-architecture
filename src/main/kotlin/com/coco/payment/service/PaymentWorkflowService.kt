@@ -7,6 +7,7 @@ import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingPaymentResult
 import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.persistence.repository.CompanyBillingKeyRepository
 import com.coco.payment.service.dto.PrepareBillingPaymentResult
+import com.coco.payment.service.exception.DeliveryDateChangedException
 import com.coco.payment.service.exception.OrderAlreadyPaidException
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
@@ -17,7 +18,6 @@ import java.time.Instant
 class PaymentWorkflowService(
     private val orderService: OrderService,
     private val paymentTransactionService: PaymentTransactionService,
-    private val productService: ProductService,
     private val companyBillingKeyRepository: CompanyBillingKeyRepository,
     @Value("\${payment.pending-timeout-seconds}")
     private val pendingTimeoutSeconds: Long,
@@ -26,7 +26,19 @@ class PaymentWorkflowService(
 
     @Transactional
     fun prepare(command: BillingPaymentCommand): PrepareBillingPaymentResult {
-        val orderItems = resolveOrderItems(command.items, command.totalPrice)
+        val orderItems = orderService.resolveOrderItems(command.items)
+        // 클라이언트의 totalPrice는 "사용자가 확인한 금액"이므로, 재계산 값과 다르면 승인 전에 거부한다.
+        val computedTotal = orderItems.sumOf { it.unitPrice * it.quantity }
+        require(computedTotal == command.totalPrice) {
+            "Total price mismatch: requested ${command.totalPrice} but computed $computedTotal"
+        }
+
+        // 화면에서 본 보장일이 지금도 약속 가능한지 확인한다. 마감(22시)을 넘겼으면
+        // 지킬 수 없는 보장이므로 승인 전에 거부하고, 클라이언트가 새 값을 받아가게 한다.
+        val deliveryDate = orderService.computeDeliveryDate()
+        if (command.deliveryDate != deliveryDate) {
+            throw DeliveryDateChangedException("배송 보장일이 변경되었습니다. 다시 확인해 주세요.")
+        }
 
         val existingOrder = orderService.findByOrderKeyForUpdate(command.orderKey)
         val order = if (existingOrder != null) {
@@ -40,13 +52,19 @@ class PaymentWorkflowService(
             }
             existingOrder
         } else {
-            val orderId = orderService.createPendingOrder(command.orderKey, command.companySeq, command.totalPrice, orderItems)
+            val orderId = orderService.createPendingOrder(command.orderKey, command.companySeq, command.totalPrice, deliveryDate, orderItems)
             orderService.findById(orderId) ?: error("Created order not found: $orderId")
         }
 
         // PENDING 거래가 없어도 주문 자체가 이미 결제 완료일 수 있다(예: 폴링이 끝난 뒤 재처리가 확정한 경우).
         // 이때 같은 orderKey로 다시 들어오면 중복 승인이 되므로 주문 상태로 막는다.
         if (order.isPaid) throw OrderAlreadyPaidException("이미 결제가 완료된 주문입니다.")
+
+        // 결제 전까지 보장일은 계약이 아니다. 마감을 넘겨 낡은 값이 저장돼 있으면
+        // (예: 21:58 생성 주문을 22:10에 재시도) 지금 약속 가능한 값으로 갱신한다.
+        if (existingOrder != null && existingOrder.deliveryDate != deliveryDate) {
+            orderService.updateDeliveryDate(order.id!!, deliveryDate)
+        }
 
         val pending = paymentTransactionService.findPendingByOrderSeq(order.id!!)
         if (pending != null) {
@@ -61,26 +79,15 @@ class PaymentWorkflowService(
         return PrepareBillingPaymentResult.Ready(order.id!!, paymentTransactionId, command.orderKey, command.paymentKey, billingKey.billingKey, billingKey.customerKey, moid, command.orderName, command.totalPrice)
     }
 
-    // 이름과 가격은 클라이언트 값을 받지 않고 서버가 조회한 상품에서 가져온다.
-    // 클라이언트의 totalPrice는 "사용자가 확인한 금액"이므로, 재계산 값과 다르면 승인 전에 거부한다.
-    private fun resolveOrderItems(items: List<BillingPaymentItem>, totalPrice: Long): List<BillingOrderItem> {
-        val productsById = productService.findByIds(items.map { it.productId })
-        val orderItems = items.map { item ->
-            val product = productsById[item.productId]
-                ?: throw IllegalArgumentException("Unknown product: ${item.productId}")
-            BillingOrderItem(product.name, product.price, item.quantity)
-        }
-        val computedTotal = orderItems.sumOf { it.unitPrice * it.quantity }
-        require(computedTotal == totalPrice) {
-            "Total price mismatch: requested $totalPrice but computed $computedTotal"
-        }
-        return orderItems
-    }
-
     // 순서와 무관하게 비교하기 위한 정렬된 표현.
     private fun canonicalize(items: List<BillingOrderItem>) =
         items.map { "${it.itemName}:${it.unitPrice}:${it.quantity}" }.sorted()
 
+    // TODO: 결제가 늦게 확정되면(재처리가 PENDING을 뒤늦게 성공으로 확정) 주문의 배송 보장일이
+    //  이미 지킬 수 없는 값일 수 있다. 확정 시점(completeByTransactionId 포함)에 보장일을 재계산해서
+    //  어긋나면 취소한다 — 도착 보장 정책. 취소 API가 생기는 망취소 단계에서 구현.
+    //  취소하지 않는 대안도 검토할 것: 쿠팡식으로 다음 회차에 보내고 보상하는 모델. 단 그 경우
+    //  약속한 날짜와 실제 태울 날짜를 둘 다 저장해야 한다(약속이 남아 있어야 보상 근거가 된다).
     @Transactional
     fun complete(prepared: PrepareBillingPaymentResult.Ready, result: TossBillingPaymentResult) {
         paymentTransactionService.complete(prepared.paymentTransactionId, result.tid)

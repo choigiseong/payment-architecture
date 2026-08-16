@@ -6,6 +6,7 @@ import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.Positive
+import java.time.LocalDate
 
 data class BillingPaymentRequest(
     val companySeq: Long,
@@ -16,11 +17,12 @@ data class BillingPaymentRequest(
     val orderName: String,
     @field:Positive
     val totalPrice: Long,
+    val deliveryDate: LocalDate,
     @field:NotEmpty
     @field:Valid
     val items: List<BillingPaymentItemRequest>,
 ) {
-    fun toCommand() = BillingPaymentCommand.of(companySeq, orderKey, paymentKey, orderName, totalPrice, items.map { BillingPaymentItem(it.productId, it.quantity) })
+    fun toCommand() = BillingPaymentCommand.of(companySeq, orderKey, paymentKey, orderName, totalPrice, deliveryDate, items.map { BillingPaymentItem(it.productId, it.quantity) })
 }
 
 data class BillingPaymentItemRequest(
