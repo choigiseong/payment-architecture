@@ -1,6 +1,8 @@
 package com.coco.payment.service
 
+import com.coco.payment.service.dto.BillingOrderItem
 import com.coco.payment.service.dto.BillingPaymentCommand
+import com.coco.payment.service.dto.BillingPaymentItem
 import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingPaymentResult
 import com.coco.payment.persistence.enumerator.OrderStatus
 import com.coco.payment.persistence.enumerator.PaymentSystem
@@ -15,6 +17,7 @@ import java.time.Instant
 class PaymentWorkflowService(
     private val orderService: OrderService,
     private val paymentTransactionService: PaymentTransactionService,
+    private val productService: ProductService,
     private val companyBillingKeyRepository: CompanyBillingKeyRepository,
     @Value("\${payment.pending-timeout-seconds}")
     private val pendingTimeoutSeconds: Long,
@@ -23,6 +26,8 @@ class PaymentWorkflowService(
 
     @Transactional
     fun prepare(command: BillingPaymentCommand): PrepareBillingPaymentResult {
+        val orderItems = resolveOrderItems(command.items, command.totalPrice)
+
         val existingOrder = orderService.findByOrderKeyForUpdate(command.orderKey)
         val order = if (existingOrder != null) {
             require(existingOrder.companySeq == command.companySeq && existingOrder.totalPrice == command.totalPrice) {
@@ -30,7 +35,7 @@ class PaymentWorkflowService(
             }
             existingOrder
         } else {
-            val orderId = orderService.createPendingOrder(command.orderKey, command.companySeq, command.totalPrice, command.items)
+            val orderId = orderService.createPendingOrder(command.orderKey, command.companySeq, command.totalPrice, orderItems)
             orderService.findById(orderId) ?: error("Created order not found: $orderId")
         }
 
@@ -49,6 +54,22 @@ class PaymentWorkflowService(
         val billingKey = companyBillingKeyRepository.findByCompanySeqAndPaymentSystem(command.companySeq, PaymentSystem.TOSS)
             ?: throw IllegalArgumentException("Toss billing key not found for company: ${command.companySeq}")
         return PrepareBillingPaymentResult.Ready(order.id!!, paymentTransactionId, command.orderKey, command.paymentKey, billingKey.billingKey, billingKey.customerKey, moid, command.orderName, command.totalPrice)
+    }
+
+    // 이름과 가격은 클라이언트 값을 받지 않고 서버가 조회한 상품에서 가져온다.
+    // 클라이언트의 totalPrice는 "사용자가 확인한 금액"이므로, 재계산 값과 다르면 승인 전에 거부한다.
+    private fun resolveOrderItems(items: List<BillingPaymentItem>, totalPrice: Long): List<BillingOrderItem> {
+        val productsById = productService.findByIds(items.map { it.productId })
+        val orderItems = items.map { item ->
+            val product = productsById[item.productId]
+                ?: throw IllegalArgumentException("Unknown product: ${item.productId}")
+            BillingOrderItem(product.name, product.price, item.quantity)
+        }
+        val computedTotal = orderItems.sumOf { it.unitPrice * it.quantity }
+        require(computedTotal == totalPrice) {
+            "Total price mismatch: requested $totalPrice but computed $computedTotal"
+        }
+        return orderItems
     }
 
     @Transactional
