@@ -1,11 +1,14 @@
 package com.coco.payment.service.dto
 
+import java.time.LocalDate
+
 data class BillingPaymentCommand(
     val companySeq: Long,
     val orderKey: String,
     val paymentKey: String,
     val orderName: String,
     val totalPrice: Long,
+    val deliveryDate: LocalDate,
     val items: List<BillingPaymentItem>,
 )
 
@@ -22,8 +25,9 @@ data class BillingPaymentCommand(
             paymentKey: String,
             orderName: String,
             totalPrice: Long,
+            deliveryDate: LocalDate,
             items: List<BillingPaymentItem>,
-        ) = BillingPaymentCommand(companySeq, orderKey, paymentKey, orderName, totalPrice, items)
+        ) = BillingPaymentCommand(companySeq, orderKey, paymentKey, orderName, totalPrice, deliveryDate, items)
     }
 }
 

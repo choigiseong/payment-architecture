@@ -3,6 +3,7 @@ package com.coco.payment.controller.dto
 import com.coco.payment.persistence.enumerator.OrderStatus
 import com.coco.payment.persistence.enumerator.PaymentTransactionStatus
 import com.coco.payment.service.dto.BillingPaymentResult
+import java.time.LocalDate
 
 data class BillingPaymentResponse(
     val orderKey: String,
@@ -31,6 +32,7 @@ data class PaymentPollingResponse(
     val paymentKey: String,
     val orderStatus: OrderStatus,
     val paymentStatus: PaymentTransactionStatus,
+    val deliveryDate: LocalDate,
     val tid: String?,
     val code: String?,
     val message: String?,
@@ -41,6 +43,7 @@ data class PaymentPollingResponse(
             result.paymentKey,
             result.orderStatus,
             result.paymentStatus,
+            result.deliveryDate,
             result.tid,
             result.code,
             result.message,

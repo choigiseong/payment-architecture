@@ -28,6 +28,7 @@ class BillingPaymentFacade(
                 existingTransaction.paymentKey,
                 order.status,
                 existingTransaction.status,
+                order.deliveryDate,
                 existingTransaction.tid,
                 existingTransaction.failCode,
                 existingTransaction.failMessage,
@@ -38,7 +39,7 @@ class BillingPaymentFacade(
         if (prepared is PrepareBillingPaymentResult.AlreadyPending) {
             val order = orderService.findById(prepared.orderId)
                 ?: throw IllegalStateException("Order not found for payment transaction with paymentKey: ${prepared.paymentKey}")
-            return BillingPaymentResult(order.orderKey, prepared.paymentKey, order.status, prepared.status, prepared.tid, null, null)
+            return BillingPaymentResult(order.orderKey, prepared.paymentKey, order.status, prepared.status, order.deliveryDate, prepared.tid, null, null)
         }
         val result = prepared as PrepareBillingPaymentResult.Ready
 
@@ -52,22 +53,29 @@ class BillingPaymentFacade(
 
         return when (approveResult) {
             is PaymentResult.Success -> {
+                // TODO: complete()가 실패하면 예외가 그대로 올라가 500이 나가고, 클라이언트는
+                //  "다시 시도해 주세요"를 띄운다. 승인은 이미 성공해 돈이 빠져나간 뒤라 최악의 안내다.
+                //  승인 전 실패(돈 안 나감, 재시도가 맞음)와 승인 후 실패(돈 나감, 확인으로 보내야 함)를
+                //  구분해야 한다. 후자는 Unknown과 같이 PENDING 응답으로 결과 페이지에 보내는 편이 맞다.
+                //  불확실한 Unknown은 폴링시키면서 성공을 확인한 이 경로를 더 나쁘게 다루고 있다.
+                //  받아둔 tid도 롤백과 함께 버려진다. 스케줄러가 inquiry로 되찾지만, 그때 Toss가 계속
+                //  안 잡히면 30분 뒤 실패로 확정돼 Toss는 성공인데 우리 DB만 FAILED가 된다.
                 paymentWorkflowService.complete(result, approveResult.value)
-                BillingPaymentResult(result.orderKey, result.paymentKey, OrderStatus.PAID, PaymentTransactionStatus.SUCCESS, approveResult.value.tid, null, null)
+                BillingPaymentResult(result.orderKey, result.paymentKey, OrderStatus.PAID, PaymentTransactionStatus.SUCCESS, command.deliveryDate, approveResult.value.tid, null, null)
             }
             is PaymentResult.Failure -> {
                 paymentWorkflowService.fail(result, approveResult.error.code, approveResult.error.message)
                 // 이번 시도만 실패했을 뿐 주문은 아직 미결제 상태다(같은 orderKey로 재시도 가능).
-                BillingPaymentResult(result.orderKey, result.paymentKey, OrderStatus.PENDING_PAYMENT, PaymentTransactionStatus.FAILED, null, approveResult.error.code, approveResult.error.message)
+                BillingPaymentResult(result.orderKey, result.paymentKey, OrderStatus.PENDING_PAYMENT, PaymentTransactionStatus.FAILED, command.deliveryDate, null, approveResult.error.code, approveResult.error.message)
             }
             is PaymentResult.Unknown ->
-                BillingPaymentResult(result.orderKey, result.paymentKey, OrderStatus.PENDING_PAYMENT, PaymentTransactionStatus.PENDING, null, approveResult.error.code, approveResult.error.message)
+                BillingPaymentResult(result.orderKey, result.paymentKey, OrderStatus.PENDING_PAYMENT, PaymentTransactionStatus.PENDING, command.deliveryDate, null, approveResult.error.code, approveResult.error.message)
         }
     }
 
     fun poll(paymentKey: String): BillingPaymentResult? {
         val transaction = paymentWorkflowService.findByPaymentKey(paymentKey) ?: return null
         val order = orderService.findById(transaction.orderSeq) ?: return null
-        return BillingPaymentResult(order.orderKey, transaction.paymentKey, order.status, transaction.status, transaction.tid, transaction.failCode, transaction.failMessage)
+        return BillingPaymentResult(order.orderKey, transaction.paymentKey, order.status, transaction.status, order.deliveryDate, transaction.tid, transaction.failCode, transaction.failMessage)
     }
 }
