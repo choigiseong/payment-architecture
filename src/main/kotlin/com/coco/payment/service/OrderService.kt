@@ -43,8 +43,14 @@ class OrderService(
     fun findByOrderKeyForUpdate(orderKey: String) = orderRepository.findByOrderKeyForUpdate(orderKey)
     fun findById(orderId: Long) = orderRepository.findById(orderId)
 
-    fun findItems(orderId: Long): List<BillingOrderItem> =
-        orderItemRepository.findByOrderSeq(orderId).map { BillingOrderItem(it.itemName, it.unitPrice, it.quantity) }
+    // 합계가 같아도 상품 구성은 다를 수 있다(예: 6500x2 와 5000+3800+4200).
+    fun hasSameItems(orderId: Long, items: List<BillingOrderItem>): Boolean =
+        canonicalize(orderItemRepository.findByOrderSeq(orderId).map { BillingOrderItem(it.itemName, it.unitPrice, it.quantity) }) ==
+            canonicalize(items)
+
+    // 순서와 무관하게 비교하기 위한 정렬된 표현.
+    private fun canonicalize(items: List<BillingOrderItem>) =
+        items.map { "${it.itemName}:${it.unitPrice}:${it.quantity}" }.sorted()
 
     fun createPendingOrder(orderKey: String, companySeq: Long, totalPrice: Long, deliveryDate: LocalDate, items: List<BillingOrderItem>): Long {
         val order = Order(null, orderKey, companySeq, totalPrice, deliveryDate, OrderStatus.PENDING_PAYMENT, null, null)

@@ -1,8 +1,6 @@
 package com.coco.payment.service
 
-import com.coco.payment.service.dto.BillingOrderItem
 import com.coco.payment.service.dto.BillingPaymentCommand
-import com.coco.payment.service.dto.BillingPaymentItem
 import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingPaymentResult
 import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.persistence.repository.CompanyBillingKeyRepository
@@ -45,9 +43,8 @@ class PaymentWorkflowService(
             require(existingOrder.companySeq == command.companySeq && existingOrder.totalPrice == command.totalPrice) {
                 "Order key is already associated with a different order"
             }
-            // 합계가 같아도 상품 구성은 다를 수 있다(예: 6500x2 와 5000+3800+4200).
             // 기존 주문의 항목은 갱신하지 않으므로, 다르면 저장된 내용과 어긋난 채로 승인된다.
-            require(canonicalize(orderService.findItems(existingOrder.id!!)) == canonicalize(orderItems)) {
+            require(orderService.hasSameItems(existingOrder.id!!, orderItems)) {
                 "Order key is already associated with different order items"
             }
             existingOrder
@@ -79,15 +76,13 @@ class PaymentWorkflowService(
         return PrepareBillingPaymentResult.Ready(order.id!!, paymentTransactionId, command.orderKey, command.paymentKey, billingKey.billingKey, billingKey.customerKey, moid, command.orderName, command.totalPrice)
     }
 
-    // 순서와 무관하게 비교하기 위한 정렬된 표현.
-    private fun canonicalize(items: List<BillingOrderItem>) =
-        items.map { "${it.itemName}:${it.unitPrice}:${it.quantity}" }.sorted()
-
-    // TODO: 결제가 늦게 확정되면(재처리가 PENDING을 뒤늦게 성공으로 확정) 주문의 배송 보장일이
-    //  이미 지킬 수 없는 값일 수 있다. 확정 시점(completeByTransactionId 포함)에 보장일을 재계산해서
-    //  어긋나면 취소한다 — 도착 보장 정책. 취소 API가 생기는 망취소 단계에서 구현.
-    //  취소하지 않는 대안도 검토할 것: 쿠팡식으로 다음 회차에 보내고 보상하는 모델. 단 그 경우
-    //  약속한 날짜와 실제 태울 날짜를 둘 다 저장해야 한다(약속이 남아 있어야 보상 근거가 된다).
+    // TODO(미정): 결제가 늦게 확정되면(재처리가 PENDING을 뒤늦게 성공으로 확정) 주문의 배송
+    //  보장일이 이미 지킬 수 없는 값일 수 있다. 확정 시점(completeByTransactionId 포함)에
+    //  재계산해 어긋남을 감지하는 것까지는 필요해 보이지만, 그 뒤 처분은 정하지 않았다.
+    //  - 취소: 못 지킬 보장은 팔지 않는다. 이미 승인된 결제를 되돌리는 비용을 치른다.
+    //  - 다음 회차로 미루고 보상(쿠팡식): 거래는 살지만, 약속한 날짜와 실제 태울 날짜를
+    //    둘 다 저장해야 한다(약속이 남아 있어야 보상 근거가 된다).
+    //  어느 쪽이든 취소 API나 스키마 변경이 따르므로 스케줄러 설계와 같이 정한다.
     @Transactional
     fun complete(prepared: PrepareBillingPaymentResult.Ready, result: TossBillingPaymentResult) {
         paymentTransactionService.complete(prepared.paymentTransactionId, result.tid)
