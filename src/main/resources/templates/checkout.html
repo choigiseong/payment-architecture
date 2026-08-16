@@ -7,17 +7,39 @@
 <div class="card">
     <ul id="checkout-lines" class="summary-list"></ul>
     <div class="total-row"><span>합계</span><span id="checkout-total">0원</span></div>
+    <p id="delivery-date" class="muted"></p>
 </div>
 <button type="button" id="pay-button" class="btn btn-primary btn-block" onclick="pay()">결제</button>
 <p id="pay-error" class="muted" style="color: var(--danger); display:none"></p>
 
 <script>
-    function renderSummary() {
+    // 배송 보장일과 금액은 서버가 계산해 내려준다. 화면 표시와 결제 요청이 모두 이 값을 쓰므로
+    // 클라이언트가 계산 규칙을 복제하지 않아도 되고, 브라우저 시계와 어긋날 일도 없다.
+    let preview = null;
+
+    function loadPreview() {
         const cart = getCart();
-        document.getElementById("checkout-lines").innerHTML = cart.map(line =>
-            `<li>${line.name} x ${line.quantity} = ${line.price * line.quantity}원</li>`
+        return fetchWithTimeout("/api/checkout/preview", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ items: cart.map(line => ({ productId: line.productId, quantity: line.quantity })) }),
+        }, 10000)
+            .then(res => (res.ok ? res.json() : null))
+            .then(result => {
+                if (result) {
+                    preview = result;
+                    renderPreview();
+                }
+            });
+    }
+
+    function renderPreview() {
+        document.getElementById("checkout-lines").innerHTML = preview.items.map(line =>
+            `<li>${line.name} x ${line.quantity} = ${line.lineTotal}원</li>`
         ).join("");
-        document.getElementById("checkout-total").textContent = cartTotal(cart) + "원";
+        document.getElementById("checkout-total").textContent = preview.totalPrice + "원";
+        const [, month, day] = preview.deliveryDate.split("-");
+        document.getElementById("delivery-date").textContent = `${Number(month)}월 ${Number(day)}일 도착 보장`;
     }
 
     function showPayError(message) {
@@ -33,20 +55,23 @@
 
     function pay() {
         const cart = getCart();
-        if (cart.length === 0) {
+        if (cart.length === 0 || preview === null) {
             alert("장바구니가 비어 있습니다");
             return;
         }
-        if (!confirm(`총 ${cartTotal(cart)}원을 결제하시겠습니까?`)) {
+        if (!confirm(`총 ${preview.totalPrice}원을 결제하시겠습니까?`)) {
             return;
         }
         const paymentKey = crypto.randomUUID();
+        // 금액과 보장일은 화면에 보여준 값, 즉 서버가 내려준 값을 그대로 싣는다.
+        // 여기서 다시 계산하면 화면과 요청이 어긋나 검증이 무의미해진다.
         const body = {
             companySeq: COMPANY_SEQ,
             orderKey: getOrderKey(),
             paymentKey: paymentKey,
             orderName: "장바구니 결제",
-            totalPrice: cartTotal(cart),
+            totalPrice: preview.totalPrice,
+            deliveryDate: preview.deliveryDate,
             items: cart.map(line => ({ productId: line.productId, quantity: line.quantity })),
         };
         document.getElementById("pay-button").disabled = true;
@@ -72,8 +97,14 @@
     }
 
     function handlePayError(status, problem) {
-        // 이미 결제된 주문은 같은 장바구니로 재시도해도 계속 막히므로 비운다(orderKey도 함께 무효화된다).
-        if (status === 409) {
+        if (problem.type === "4092") {
+            // 마감을 넘겨 보장일이 바뀌었다. 장바구니는 그대로 두고 새 값을 받아 화면을 갱신한다.
+            loadPreview();
+            showPayError(problem.detail);
+            return;
+        }
+        if (problem.type === "4091") {
+            // 이미 결제된 주문은 같은 장바구니로 재시도해도 계속 막히므로 비운다(orderKey도 함께 무효화된다).
             clearCart();
         }
         showPayError(problem.detail ?? "결제 요청을 처리하지 못했습니다. 다시 시도해 주세요.");
@@ -94,7 +125,7 @@
         goResult(result.paymentKey ?? paymentKey);
     }
 
-    renderSummary();
+    loadPreview();
 </script>
 </body>
 </html>
