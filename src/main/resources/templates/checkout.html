@@ -43,8 +43,7 @@
             `<li>${line.name} ${line.unitPrice}원 x ${line.quantity} = ${line.lineTotal}원</li>`
         ).join("");
         document.getElementById("checkout-total").textContent = preview.totalPrice + "원";
-        const [, month, day] = preview.deliveryDate.split("-");
-        document.getElementById("delivery-date").textContent = `${Number(month)}월 ${Number(day)}일 도착 보장`;
+        document.getElementById("delivery-date").textContent = formatDeliveryDate(preview.deliveryDate);
     }
 
     function showPayError(message) {

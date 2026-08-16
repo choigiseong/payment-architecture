@@ -85,12 +85,18 @@ function statusClass(status) {
     return "status-badge status-" + status;
 }
 
+function formatDeliveryDate(deliveryDate) {
+    const [, month, day] = deliveryDate.split("-");
+    return `${Number(month)}월 ${Number(day)}일 도착 보장`;
+}
+
 function showResult(result) {
     const box = document.getElementById("result");
     box.style.display = "block";
     box.innerHTML = `
         <p>주문 상태: <span class="${statusClass(result.orderStatus)}">${result.orderStatus}</span></p>
         <p>결제 상태: <span class="${statusClass(result.paymentStatus)}">${result.paymentStatus}</span></p>
+        <p>${formatDeliveryDate(result.deliveryDate)}</p>
         <p class="muted">tid: ${result.tid ?? "-"}</p>
         <p class="muted">${result.message ?? ""}</p>
     `;

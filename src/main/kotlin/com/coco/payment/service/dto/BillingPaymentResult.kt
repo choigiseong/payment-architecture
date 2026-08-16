@@ -2,6 +2,7 @@ package com.coco.payment.service.dto
 
 import com.coco.payment.persistence.enumerator.OrderStatus
 import com.coco.payment.persistence.enumerator.PaymentTransactionStatus
+import java.time.LocalDate
 
 sealed interface PrepareBillingPaymentResult {
     val orderId: Long
@@ -34,6 +35,7 @@ data class BillingPaymentResult(
     val paymentKey: String,
     val orderStatus: OrderStatus,
     val paymentStatus: PaymentTransactionStatus,
+    val deliveryDate: LocalDate,
     val tid: String?,
     val code: String?,
     val message: String?,

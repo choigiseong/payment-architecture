@@ -28,6 +28,7 @@ class BillingPaymentFacade(
                 existingTransaction.paymentKey,
                 order.status,
                 existingTransaction.status,
+                order.deliveryDate,
                 existingTransaction.tid,
                 existingTransaction.failCode,
                 existingTransaction.failMessage,
@@ -38,7 +39,7 @@ class BillingPaymentFacade(
         if (prepared is PrepareBillingPaymentResult.AlreadyPending) {
             val order = orderService.findById(prepared.orderId)
                 ?: throw IllegalStateException("Order not found for payment transaction with paymentKey: ${prepared.paymentKey}")
-            return BillingPaymentResult(order.orderKey, prepared.paymentKey, order.status, prepared.status, prepared.tid, null, null)
+            return BillingPaymentResult(order.orderKey, prepared.paymentKey, order.status, prepared.status, order.deliveryDate, prepared.tid, null, null)
         }
         val result = prepared as PrepareBillingPaymentResult.Ready
 
@@ -60,21 +61,21 @@ class BillingPaymentFacade(
                 //  받아둔 tid도 롤백과 함께 버려진다. 스케줄러가 inquiry로 되찾지만, 그때 Toss가 계속
                 //  안 잡히면 30분 뒤 실패로 확정돼 Toss는 성공인데 우리 DB만 FAILED가 된다.
                 paymentWorkflowService.complete(result, approveResult.value)
-                BillingPaymentResult(result.orderKey, result.paymentKey, OrderStatus.PAID, PaymentTransactionStatus.SUCCESS, approveResult.value.tid, null, null)
+                BillingPaymentResult(result.orderKey, result.paymentKey, OrderStatus.PAID, PaymentTransactionStatus.SUCCESS, command.deliveryDate, approveResult.value.tid, null, null)
             }
             is PaymentResult.Failure -> {
                 paymentWorkflowService.fail(result, approveResult.error.code, approveResult.error.message)
                 // 이번 시도만 실패했을 뿐 주문은 아직 미결제 상태다(같은 orderKey로 재시도 가능).
-                BillingPaymentResult(result.orderKey, result.paymentKey, OrderStatus.PENDING_PAYMENT, PaymentTransactionStatus.FAILED, null, approveResult.error.code, approveResult.error.message)
+                BillingPaymentResult(result.orderKey, result.paymentKey, OrderStatus.PENDING_PAYMENT, PaymentTransactionStatus.FAILED, command.deliveryDate, null, approveResult.error.code, approveResult.error.message)
             }
             is PaymentResult.Unknown ->
-                BillingPaymentResult(result.orderKey, result.paymentKey, OrderStatus.PENDING_PAYMENT, PaymentTransactionStatus.PENDING, null, approveResult.error.code, approveResult.error.message)
+                BillingPaymentResult(result.orderKey, result.paymentKey, OrderStatus.PENDING_PAYMENT, PaymentTransactionStatus.PENDING, command.deliveryDate, null, approveResult.error.code, approveResult.error.message)
         }
     }
 
     fun poll(paymentKey: String): BillingPaymentResult? {
         val transaction = paymentWorkflowService.findByPaymentKey(paymentKey) ?: return null
         val order = orderService.findById(transaction.orderSeq) ?: return null
-        return BillingPaymentResult(order.orderKey, transaction.paymentKey, order.status, transaction.status, transaction.tid, transaction.failCode, transaction.failMessage)
+        return BillingPaymentResult(order.orderKey, transaction.paymentKey, order.status, transaction.status, order.deliveryDate, transaction.tid, transaction.failCode, transaction.failMessage)
     }
 }
