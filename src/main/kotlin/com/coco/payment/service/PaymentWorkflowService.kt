@@ -33,6 +33,11 @@ class PaymentWorkflowService(
             require(existingOrder.companySeq == command.companySeq && existingOrder.totalPrice == command.totalPrice) {
                 "Order key is already associated with a different order"
             }
+            // 합계가 같아도 상품 구성은 다를 수 있다(예: 6500x2 와 5000+3800+4200).
+            // 기존 주문의 항목은 갱신하지 않으므로, 다르면 저장된 내용과 어긋난 채로 승인된다.
+            require(canonicalize(orderService.findItems(existingOrder.id!!)) == canonicalize(orderItems)) {
+                "Order key is already associated with different order items"
+            }
             existingOrder
         } else {
             val orderId = orderService.createPendingOrder(command.orderKey, command.companySeq, command.totalPrice, orderItems)
@@ -71,6 +76,10 @@ class PaymentWorkflowService(
         }
         return orderItems
     }
+
+    // 순서와 무관하게 비교하기 위한 정렬된 표현.
+    private fun canonicalize(items: List<BillingOrderItem>) =
+        items.map { "${it.itemName}:${it.unitPrice}:${it.quantity}" }.sorted()
 
     @Transactional
     fun complete(prepared: PrepareBillingPaymentResult.Ready, result: TossBillingPaymentResult) {

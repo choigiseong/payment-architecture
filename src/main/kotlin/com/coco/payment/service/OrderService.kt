@@ -15,6 +15,9 @@ class OrderService(private val orderRepository: OrderRepository, private val ord
     fun findByOrderKeyForUpdate(orderKey: String) = orderRepository.findByOrderKeyForUpdate(orderKey)
     fun findById(orderId: Long) = orderRepository.findById(orderId)
 
+    fun findItems(orderId: Long): List<BillingOrderItem> =
+        orderItemRepository.findByOrderSeq(orderId).map { BillingOrderItem(it.itemName, it.unitPrice, it.quantity) }
+
     fun createPendingOrder(orderKey: String, companySeq: Long, totalPrice: Long, items: List<BillingOrderItem>): Long {
         val order = Order(null, orderKey, companySeq, totalPrice, OrderStatus.PENDING_PAYMENT, null, null)
         check(orderRepository.insert(order) == 1) { "Failed to insert order" }
