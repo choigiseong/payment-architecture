@@ -1,6 +1,6 @@
 package com.coco.payment.service.facade
 
-import com.coco.payment.handler.paymentgateway.toss.TossBillingPaymentHandler
+import com.coco.payment.handler.paymentgateway.toss.TossPaymentHandler
 import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingPaymentCommand
 import com.coco.payment.persistence.enumerator.OrderStatus
 import com.coco.payment.persistence.enumerator.PaymentTransactionStatus
@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service
 class BillingPaymentFacade(
     private val orderService: OrderService,
     private val paymentWorkflowService: PaymentWorkflowService,
-    private val tossBillingPaymentHandler: TossBillingPaymentHandler,
+    private val tossPaymentHandler: TossPaymentHandler,
 ) {
     fun pay(command: BillingPaymentCommand): BillingPaymentResult {
         val existingTransaction = paymentWorkflowService.findByPaymentKey(command.paymentKey)
@@ -46,7 +46,7 @@ class BillingPaymentFacade(
         //  문제가 되는 규모가 되면 네이버식으로 전환한다 — 접수(prepare)까지만 하고 즉시 응답,
         //  승인은 워커가 비동기 처리, 클라이언트는 처음부터 결과 페이지 폴링으로 확정.
         //  결과 페이지/지수 백오프 폴링/PENDING 재처리 스케줄러는 그대로 재사용 가능하다.
-        val approveResult = tossBillingPaymentHandler.approve(
+        val approveResult = tossPaymentHandler.approve(
             TossBillingPaymentCommand(result.billingKey, result.customerKey, result.moid, result.orderName, result.amount)
         )
 

@@ -1,7 +1,7 @@
 package com.coco.payment.service
 
 import com.coco.payment.handler.paymentgateway.dto.PaymentResult
-import com.coco.payment.handler.paymentgateway.toss.TossBillingPaymentHandler
+import com.coco.payment.handler.paymentgateway.toss.TossPaymentHandler
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
@@ -11,7 +11,7 @@ import java.time.Instant
 class PaymentReconciliationService(
     private val paymentTransactionService: PaymentTransactionService,
     private val paymentWorkflowService: PaymentWorkflowService,
-    private val tossBillingPaymentHandler: TossBillingPaymentHandler,
+    private val tossPaymentHandler: TossPaymentHandler,
     @Value("\${payment.pending-timeout-seconds}")
     private val pendingTimeoutSeconds: Long,
     @Value("\${payment.reconciliation.max-window-seconds}")
@@ -21,7 +21,7 @@ class PaymentReconciliationService(
     fun reconcileExpiredPendingTransactions() {
         val now = Instant.now()
         paymentTransactionService.findExpiredPending(now).forEach { transaction ->
-            val result = tossBillingPaymentHandler.inquiry(transaction.moid)
+            val result = tossPaymentHandler.inquiry(transaction.moid)
             if (result is PaymentResult.Success) {
                 paymentWorkflowService.completeByTransactionId(transaction.id!!, result.value.tid)
                 return@forEach
