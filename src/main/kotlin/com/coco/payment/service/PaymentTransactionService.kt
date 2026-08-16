@@ -21,7 +21,7 @@ class PaymentTransactionService(private val paymentTransactionRepository: Paymen
 
     @Transactional
     fun createPending(paymentKey: String, orderId: Long, moid: String, amount: Long, expiredAt: Instant): Long {
-        val transaction = PaymentTransaction(null, paymentKey, orderId, moid, null, amount, PaymentTransactionStatus.PENDING, expiredAt, null, null)
+        val transaction = PaymentTransaction(null, paymentKey, orderId, moid, null, amount, PaymentTransactionStatus.PENDING, null, null, expiredAt, null, null)
         check(paymentTransactionRepository.insert(transaction) == 1) { "Failed to insert payment transaction" }
         return transaction.id!!
     }
@@ -33,15 +33,22 @@ class PaymentTransactionService(private val paymentTransactionRepository: Paymen
 
     @Transactional
     fun complete(paymentTransactionId: Long, tid: String) {
-        check(paymentTransactionRepository.mark(paymentTransactionId, PaymentTransactionStatus.PENDING, PaymentTransactionStatus.SUCCESS, tid) == 1) {
+        check(paymentTransactionRepository.mark(paymentTransactionId, PaymentTransactionStatus.PENDING, PaymentTransactionStatus.SUCCESS, tid, null, null) == 1) {
             "Failed to mark payment transaction as successful"
         }
     }
 
+    // 사유가 컬럼 길이를 넘겨 UPDATE가 실패하면 이미 청구된 결제를 FAILED로 확정하지 못하므로 잘라서 넣는다.
     @Transactional
-    fun fail(paymentTransactionId: Long) {
-        check(paymentTransactionRepository.mark(paymentTransactionId, PaymentTransactionStatus.PENDING, PaymentTransactionStatus.FAILED, null) == 1) {
-            "Failed to mark payment transaction as failed"
-        }
+    fun fail(paymentTransactionId: Long, failCode: String?, failMessage: String?) {
+        val marked = paymentTransactionRepository.mark(
+            paymentTransactionId,
+            PaymentTransactionStatus.PENDING,
+            PaymentTransactionStatus.FAILED,
+            null,
+            failCode?.take(100),
+            failMessage?.take(500),
+        )
+        check(marked == 1) { "Failed to mark payment transaction as failed" }
     }
 }

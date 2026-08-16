@@ -26,5 +26,7 @@ interface PaymentTransactionRepository {
         @Param("fromStatus") fromStatus: PaymentTransactionStatus,
         @Param("toStatus") toStatus: PaymentTransactionStatus,
         @Param("tid") tid: String?,
+        @Param("failCode") failCode: String?,
+        @Param("failMessage") failMessage: String?,
     ): Int
 }

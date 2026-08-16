@@ -27,12 +27,16 @@ class PaymentReconciliationService(
                 return@forEach
             }
             if (result is PaymentResult.Failure) {
-                paymentWorkflowService.failByTransactionId(transaction.id!!)
+                paymentWorkflowService.failByTransactionId(transaction.id!!, result.error.code, result.error.message)
                 return@forEach
             }
             if (transaction.createdAt!!.plusSeconds(maxWindowSeconds).isBefore(now)) {
                 // TODO: 실패 확정 전에 Toss 취소(망취소) API를 호출해 혹시 승인된 결제를 되돌린다.
-                paymentWorkflowService.failByTransactionId(transaction.id!!)
+                paymentWorkflowService.failByTransactionId(
+                    transaction.id!!,
+                    "RECONCILIATION_TIMEOUT",
+                    "재처리 기간 내 결제 상태를 확정하지 못했습니다.",
+                )
             } else {
                 paymentTransactionService.extendExpiry(transaction.id!!, now.plusSeconds(pendingTimeoutSeconds))
             }
