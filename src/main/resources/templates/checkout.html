@@ -35,7 +35,7 @@
 
     function renderPreview() {
         document.getElementById("checkout-lines").innerHTML = preview.items.map(line =>
-            `<li>${line.name} x ${line.quantity} = ${line.lineTotal}원</li>`
+            `<li>${line.name} ${line.unitPrice}원 x ${line.quantity} = ${line.lineTotal}원</li>`
         ).join("");
         document.getElementById("checkout-total").textContent = preview.totalPrice + "원";
         const [, month, day] = preview.deliveryDate.split("-");
@@ -54,8 +54,7 @@
     }
 
     function pay() {
-        const cart = getCart();
-        if (cart.length === 0 || preview === null) {
+        if (preview === null || preview.items.length === 0) {
             alert("장바구니가 비어 있습니다");
             return;
         }
@@ -63,8 +62,8 @@
             return;
         }
         const paymentKey = crypto.randomUUID();
-        // 금액과 보장일은 화면에 보여준 값, 즉 서버가 내려준 값을 그대로 싣는다.
-        // 여기서 다시 계산하면 화면과 요청이 어긋나 검증이 무의미해진다.
+        // 항목·금액·보장일 모두 화면에 보여준 값, 즉 서버가 내려준 미리보기를 그대로 싣는다.
+        // 여기서 장바구니를 다시 읽거나 계산하면 화면과 요청이 어긋나 검증이 무의미해진다.
         const body = {
             companySeq: COMPANY_SEQ,
             orderKey: getOrderKey(),
@@ -72,7 +71,7 @@
             orderName: "장바구니 결제",
             totalPrice: preview.totalPrice,
             deliveryDate: preview.deliveryDate,
-            items: cart.map(line => ({ productId: line.productId, quantity: line.quantity })),
+            items: preview.items.map(line => ({ productId: line.productId, quantity: line.quantity })),
         };
         document.getElementById("pay-button").disabled = true;
         document.getElementById("pay-error").style.display = "none";
@@ -87,7 +86,7 @@
                 }
                 // 서버가 오류를 반환했다. Toss 호출 전에 끊겼으므로 청구는 일어나지 않았다.
                 // 본문이 ProblemDetail이 아닐 수도 있어(핸들러 없는 500) 파싱 실패는 기본 문구로 떨어뜨린다.
-                return res.json().catch(() => ({})).then(problem => handlePayError(res.status, problem));
+                return res.json().catch(() => ({})).then(problem => handlePayError(problem));
             })
             .catch(() => {
                 // 타임아웃/네트워크 오류: 접수 여부를 알 수 없으므로 장바구니는 그대로 두고
@@ -96,7 +95,7 @@
             });
     }
 
-    function handlePayError(status, problem) {
+    function handlePayError(problem) {
         if (problem.type === "4092") {
             // 마감을 넘겨 보장일이 바뀌었다. 장바구니는 그대로 두고 새 값을 받아 화면을 갱신한다.
             loadPreview();
