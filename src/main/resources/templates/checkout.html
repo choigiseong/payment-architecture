@@ -56,32 +56,42 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),
         }, 35000)
-            .then(res => (res.ok ? res.json() : null))
-            .then(result => {
-                if (!result) {
-                    // 서버가 오류를 반환했다. Toss 호출 전에 끊겼으므로 청구는 일어나지 않았다.
-                    // 장바구니와 orderKey를 유지해 이 화면에서 바로 재시도할 수 있게 한다.
-                    showPayError("결제 요청을 처리하지 못했습니다. 다시 시도해 주세요.");
-                    return;
+            .then(res => {
+                if (res.ok) {
+                    return res.json().then(result => handlePayResult(result, paymentKey));
                 }
-                if (result.paymentStatus === "FAILED") {
-                    // 서버가 확정한 실패. 장바구니와 orderKey를 유지해 바로 재시도할 수 있게 한다.
-                    showPayError(result.message ?? "결제에 실패했습니다.");
-                    return;
-                }
-                if (result.paymentStatus === "SUCCESS") {
-                    clearCart();
-                }
-                // 성공이거나 아직 미확정(PENDING)이면 결과 페이지에서 확인한다.
-                // 이미 진행 중인 거래가 있으면 서버가 그 거래의 paymentKey를 돌려주므로,
-                // 방금 만든 키가 아니라 응답의 키로 조회해야 한다.
-                goResult(result.paymentKey ?? paymentKey);
+                // 서버가 오류를 반환했다. Toss 호출 전에 끊겼으므로 청구는 일어나지 않았다.
+                // 본문이 ProblemDetail이 아닐 수도 있어(핸들러 없는 500) 파싱 실패는 기본 문구로 떨어뜨린다.
+                return res.json().catch(() => ({})).then(problem => handlePayError(res.status, problem));
             })
             .catch(() => {
                 // 타임아웃/네트워크 오류: 접수 여부를 알 수 없으므로 장바구니는 그대로 두고
                 // 결과 페이지에서 폴링하며 실제 상태를 확인한다.
                 goResult(paymentKey);
             });
+    }
+
+    function handlePayError(status, problem) {
+        // 이미 결제된 주문은 같은 장바구니로 재시도해도 계속 막히므로 비운다(orderKey도 함께 무효화된다).
+        if (status === 409) {
+            clearCart();
+        }
+        showPayError(problem.detail ?? "결제 요청을 처리하지 못했습니다. 다시 시도해 주세요.");
+    }
+
+    function handlePayResult(result, paymentKey) {
+        if (result.paymentStatus === "FAILED") {
+            // 서버가 확정한 실패. 장바구니와 orderKey를 유지해 바로 재시도할 수 있게 한다.
+            showPayError(result.message ?? "결제에 실패했습니다.");
+            return;
+        }
+        if (result.paymentStatus === "SUCCESS") {
+            clearCart();
+        }
+        // 성공이거나 아직 미확정(PENDING)이면 결과 페이지에서 확인한다.
+        // 이미 진행 중인 거래가 있으면 서버가 그 거래의 paymentKey를 돌려주므로,
+        // 방금 만든 키가 아니라 응답의 키로 조회해야 한다.
+        goResult(result.paymentKey ?? paymentKey);
     }
 
     renderSummary();

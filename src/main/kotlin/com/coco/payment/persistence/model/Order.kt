@@ -13,4 +13,6 @@ data class Order(
     val status: OrderStatus,
     var createdAt: Instant?,
     var updatedAt: Instant?,
-)
+) {
+    val isPaid: Boolean get() = status == OrderStatus.PAID
+}
