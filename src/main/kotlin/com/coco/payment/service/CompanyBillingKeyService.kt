@@ -5,14 +5,14 @@ import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.persistence.model.CompanyBillingKey
 import com.coco.payment.persistence.repository.CompanyBillingKeyRepository
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 
 @Service
 class CompanyBillingKeyService(
     private val companyBillingKeyRepository: CompanyBillingKeyRepository,
     private val tossBillingKeyHandler: TossBillingKeyHandler,
 ) {
-    @Transactional
+    // 트랜잭션을 걸지 않는다. 분기마다 쓰기가 하나뿐이라 묶을 것이 없고,
+    // 트랜잭션을 열면 Toss 발급 요청이 끝날 때까지 DB 커넥션을 붙잡고 있게 된다.
     fun registerTossBillingKey(companySeq: Long, customerKey: String, authKey: String): CompanyBillingKey {
         val billingKey = tossBillingKeyHandler.issue(customerKey, authKey)
         val existing = companyBillingKeyRepository.findByCompanySeqAndPaymentSystem(companySeq, PaymentSystem.TOSS)
