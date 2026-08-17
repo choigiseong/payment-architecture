@@ -49,4 +49,12 @@
         SET delivery_date = #{deliveryDate}
         WHERE id = #{id}
     </update>
+
+    <select id="findByDeliveryDateAndStatus" resultType="order">
+        SELECT <include refid="orderColumns" />
+        FROM "order" AS r
+        WHERE r.delivery_date = #{deliveryDate}
+          AND r.status = #{status}
+        ORDER BY r.id
+    </select>
 </mapper>
