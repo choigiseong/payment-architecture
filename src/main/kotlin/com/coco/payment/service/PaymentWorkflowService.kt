@@ -17,8 +17,8 @@ class PaymentWorkflowService(
     private val orderService: OrderService,
     private val paymentTransactionService: PaymentTransactionService,
     private val companyBillingKeyRepository: CompanyBillingKeyRepository,
-    @Value("\${payment.pending-timeout-seconds}")
-    private val pendingTimeoutSeconds: Long,
+    @Value("\${payment.reconciliation.recheck-interval-seconds}")
+    private val recheckIntervalSeconds: Long,
 ) {
     fun findByPaymentKey(paymentKey: String) = paymentTransactionService.findByPaymentKey(paymentKey)
 
@@ -69,7 +69,7 @@ class PaymentWorkflowService(
         }
 
         val moid = command.paymentKey
-        val expiredAt = Instant.now().plusSeconds(pendingTimeoutSeconds)
+        val expiredAt = Instant.now().plusSeconds(recheckIntervalSeconds)
         val paymentTransactionId = paymentTransactionService.createPending(command.paymentKey, order.id!!, moid, command.totalPrice, expiredAt)
         val billingKey = companyBillingKeyRepository.findByCompanySeqAndPaymentSystem(command.companySeq, PaymentSystem.TOSS)
             ?: throw IllegalArgumentException("Toss billing key not found for company: ${command.companySeq}")
