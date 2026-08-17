@@ -69,6 +69,11 @@ class PaymentWorkflowService(
         }
 
         val moid = command.paymentKey
+        // TODO: 첫 만료를 재조회 간격(30초)으로 잡고 있는데, 승인 호출은 최대 70초(연결 10 + 읽기 60)까지
+        //  걸릴 수 있다. 승인이 아직 진행 중인 거래를 재처리가 집어 SUCCESS로 확정해버리면, 뒤늦게 돌아온
+        //  승인 응답이 complete()에서 CAS 0행을 만나 예외가 되고 클라이언트는 500을 받는다. 결제는
+        //  성공했고 DB에도 남았는데 사용자만 실패로 본다.
+        //  첫 만료는 승인 타임아웃보다 크게(예: 90초) 따로 잡아야 한다. 재조회 간격과는 다른 값이다.
         val expiredAt = Instant.now().plusSeconds(recheckIntervalSeconds)
         val paymentTransactionId = paymentTransactionService.createPending(command.paymentKey, order.id!!, moid, command.totalPrice, expiredAt)
         val billingKey = companyBillingKeyRepository.findByCompanySeqAndPaymentSystem(command.companySeq, PaymentSystem.TOSS)

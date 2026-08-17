@@ -19,6 +19,11 @@ class PaymentReconciliationService(
     @Value("\${payment.reconciliation.net-cancel-after-seconds}")
     private val netCancelAfterSeconds: Long,
 ) {
+    // TODO: 거래마다 Toss 조회를 순차로 하고, 조회 하나가 최대 70초까지 걸린다. 미확정이 10건이면
+    //  회차 하나가 12분 가까이 걸릴 수 있고, fixedDelay는 이전 회차가 끝나야 다음을 세므로 계속 밀린다.
+    //  하필 Toss가 느릴 때 미확정이 가장 많이 쌓이므로 부하가 늘수록 처리가 느려지는 방향이다.
+    //  그러면 "생성 후 5분에 확정한다"가 지켜지지 않아 마감 전에 결론이 안 난다.
+    //  선택지: 회차당 시간 예산을 두고 남은 건 다음 회차로 / 조회를 병렬로 / 조회 타임아웃을 줄이기.
     @Scheduled(fixedDelayString = "\${payment.reconciliation.interval-ms}")
     fun reconcilePendingTransactions() {
         val now = Instant.now()
