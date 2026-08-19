@@ -15,7 +15,7 @@ data class PaymentTransaction(
     val status: PaymentTransactionStatus,
     val failCode: String?,
     val failMessage: String?,
-    val expiredAt: Instant,
+    val nextCheckAt: Instant,
     var createdAt: Instant?,
     var updatedAt: Instant?,
 )

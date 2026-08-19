@@ -16,19 +16,19 @@ class PaymentTransactionService(private val paymentTransactionRepository: Paymen
     fun findPendingByOrderSeq(orderSeq: Long) =
         paymentTransactionRepository.findByOrderSeqAndStatus(orderSeq, PaymentTransactionStatus.PENDING)
 
-    fun findExpiredPending(now: Instant) =
-        paymentTransactionRepository.findExpiredPending(PaymentTransactionStatus.PENDING, now)
+    fun findPendingDueForCheck(now: Instant) =
+        paymentTransactionRepository.findPendingDueForCheck(PaymentTransactionStatus.PENDING, now)
 
     @Transactional
-    fun createPending(paymentKey: String, orderId: Long, moid: String, amount: Long, expiredAt: Instant): Long {
-        val transaction = PaymentTransaction(null, paymentKey, orderId, moid, null, amount, PaymentTransactionStatus.PENDING, null, null, expiredAt, null, null)
+    fun createPending(paymentKey: String, orderId: Long, moid: String, amount: Long, nextCheckAt: Instant): Long {
+        val transaction = PaymentTransaction(null, paymentKey, orderId, moid, null, amount, PaymentTransactionStatus.PENDING, null, null, nextCheckAt, null, null)
         check(paymentTransactionRepository.insert(transaction) == 1) { "Failed to insert payment transaction" }
         return transaction.id!!
     }
 
     @Transactional
-    fun extendExpiry(id: Long, expiredAt: Instant) {
-        check(paymentTransactionRepository.extendExpiry(id, expiredAt) == 1) { "Failed to extend payment transaction expiry" }
+    fun scheduleNextCheck(id: Long, nextCheckAt: Instant) {
+        check(paymentTransactionRepository.scheduleNextCheck(id, nextCheckAt) == 1) { "Failed to schedule next check" }
     }
 
     @Transactional

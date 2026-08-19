@@ -17,9 +17,9 @@ interface PaymentTransactionRepository {
         @Param("status") status: PaymentTransactionStatus,
     ): PaymentTransaction?
 
-    fun findExpiredPending(@Param("status") status: PaymentTransactionStatus, @Param("now") now: Instant): List<PaymentTransaction>
+    fun findPendingDueForCheck(@Param("status") status: PaymentTransactionStatus, @Param("now") now: Instant): List<PaymentTransaction>
 
-    fun extendExpiry(@Param("id") id: Long, @Param("expiredAt") expiredAt: Instant): Int
+    fun scheduleNextCheck(@Param("id") id: Long, @Param("nextCheckAt") nextCheckAt: Instant): Int
 
     fun mark(
         @Param("id") id: Long,

@@ -45,7 +45,7 @@ CREATE TABLE payment_transaction (
     status SMALLINT NOT NULL,
     fail_code VARCHAR(100),
     fail_message VARCHAR(500),
-    expired_at TIMESTAMP NOT NULL,
+    next_check_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT uk_payment_transaction_payment_key UNIQUE (payment_key)

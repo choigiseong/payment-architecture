@@ -27,7 +27,7 @@ class PaymentReconciliationService(
     @Scheduled(fixedDelayString = "\${payment.reconciliation.interval-ms}")
     fun reconcilePendingTransactions() {
         val now = Instant.now()
-        for (transaction in paymentTransactionService.findExpiredPending(now)) {
+        for (transaction in paymentTransactionService.findPendingDueForCheck(now)) {
             // 건별로 격리한다. 하나가 실패해도 나머지가 이번 회차에서 빠지면 안 된다.
             try {
                 reconcile(transaction, now)
@@ -56,7 +56,7 @@ class PaymentReconciliationService(
                 if (expired) {
                     paymentWorkflowService.failByTransactionId(transaction.id!!, NOT_CONFIRMED_CODE, "기한 안에 결제를 확인하지 못했습니다.")
                 } else {
-                    paymentTransactionService.extendExpiry(transaction.id!!, now.plusSeconds(recheckIntervalSeconds))
+                    paymentTransactionService.scheduleNextCheck(transaction.id!!, now.plusSeconds(recheckIntervalSeconds))
                 }
         }
     }

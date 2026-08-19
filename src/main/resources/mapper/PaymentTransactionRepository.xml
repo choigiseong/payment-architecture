@@ -11,15 +11,15 @@
         r.status AS status,
         r.fail_code AS failCode,
         r.fail_message AS failMessage,
-        r.expired_at AS expiredAt,
+        r.next_check_at AS nextCheckAt,
         r.created_at AS createdAt,
         r.updated_at AS updatedAt
     </sql>
 
     <insert id="insert" parameterType="com.coco.payment.persistence.model.PaymentTransaction"
             useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO payment_transaction (payment_key, order_seq, moid, tid, amount, status, expired_at)
-        VALUES (#{paymentKey}, #{orderSeq}, #{moid}, #{tid}, #{amount}, #{status}, #{expiredAt})
+        INSERT INTO payment_transaction (payment_key, order_seq, moid, tid, amount, status, next_check_at)
+        VALUES (#{paymentKey}, #{orderSeq}, #{moid}, #{tid}, #{amount}, #{status}, #{nextCheckAt})
     </insert>
 
     <select id="findById" resultType="payment_transaction">
@@ -41,16 +41,16 @@
           AND r.status = #{status}
     </select>
 
-    <select id="findExpiredPending" resultType="payment_transaction">
+    <select id="findPendingDueForCheck" resultType="payment_transaction">
         SELECT <include refid="paymentTransactionColumns" />
         FROM payment_transaction AS r
         WHERE r.status = #{status}
-          AND r.expired_at &lt; #{now}
+          AND r.next_check_at &lt; #{now}
     </select>
 
-    <update id="extendExpiry">
+    <update id="scheduleNextCheck">
         UPDATE payment_transaction
-        SET expired_at = #{expiredAt}
+        SET next_check_at = #{nextCheckAt}
         WHERE id = #{id}
     </update>
 
