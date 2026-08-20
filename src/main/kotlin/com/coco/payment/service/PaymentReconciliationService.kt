@@ -23,7 +23,9 @@ class PaymentReconciliationService(
     //  회차 하나가 12분 가까이 걸릴 수 있고, fixedDelay는 이전 회차가 끝나야 다음을 세므로 계속 밀린다.
     //  하필 Toss가 느릴 때 미확정이 가장 많이 쌓이므로 부하가 늘수록 처리가 느려지는 방향이다.
     //  그러면 "생성 후 5분에 확정한다"가 지켜지지 않아 마감 전에 결론이 안 난다.
-    //  선택지: 회차당 시간 예산을 두고 남은 건 다음 회차로 / 조회를 병렬로 / 조회 타임아웃을 줄이기.
+    //  선택지: 회차당 시간 예산을 두고 남은 건 다음 회차로 / 조회를 병렬로.
+    //  타임아웃 축소는 선택지가 아니다 — Toss 문서가 "자동결제 승인·거래 조회는 최대 60초가 소요되니
+    //  타임아웃을 최소 60초로 설정하라"고 명시한다. 줄이면 우리가 스스로 미확정을 만든다.
     @Scheduled(fixedDelayString = "\${payment.reconciliation.interval-ms}")
     fun reconcilePendingTransactions() {
         val now = Instant.now()
@@ -56,6 +58,9 @@ class PaymentReconciliationService(
                 if (expired) {
                     paymentWorkflowService.failByTransactionId(transaction.id!!, NOT_CONFIRMED_CODE, "기한 안에 결제를 확인하지 못했습니다.")
                 } else {
+                    // TODO: 스케줄러 주기(30초)와 이 값이 같아서 미루기가 아무 일도 하지 않는다.
+                    //  이 줄을 지워도 next_check_at이 과거로 남아 다음 회차에 또 집히고, 그게 30초 뒤다.
+                    //  스케줄러를 더 빠르게 돌릴 계획이 없으면 프로퍼티와 함께 지우는 편이 낫다.
                     paymentTransactionService.scheduleNextCheck(transaction.id!!, now.plusSeconds(recheckIntervalSeconds))
                 }
         }
