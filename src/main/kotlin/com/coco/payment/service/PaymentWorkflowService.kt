@@ -7,18 +7,14 @@ import com.coco.payment.persistence.repository.CompanyBillingKeyRepository
 import com.coco.payment.service.dto.PrepareBillingPaymentResult
 import com.coco.payment.service.exception.DeliveryDateChangedException
 import com.coco.payment.service.exception.OrderAlreadyPaidException
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.time.Instant
 
 @Service
 class PaymentWorkflowService(
     private val orderService: OrderService,
     private val paymentTransactionService: PaymentTransactionService,
     private val companyBillingKeyRepository: CompanyBillingKeyRepository,
-    @Value("\${payment.reconciliation.first-check-after-seconds}")
-    private val firstCheckAfterSeconds: Long,
 ) {
     fun findByPaymentKey(paymentKey: String) = paymentTransactionService.findByPaymentKey(paymentKey)
 
@@ -69,12 +65,7 @@ class PaymentWorkflowService(
         }
 
         val moid = command.paymentKey
-        // 승인이 진행 중인 거래를 재처리가 앞질러 확정하면, 뒤늦게 돌아온 승인 응답이 complete()에서
-        // CAS 0행을 만나 예외가 되고 클라이언트는 500을 받는다. 그래서 첫 확인은 승인 타임아웃 뒤로 둔다.
-        // 승인이 끝나면 파사드가 결론을 내거나(성공·실패) checkNow로 당기므로, 이 값이 실제로 쓰이는 것은
-        // 요청 스레드가 응답도 남기지 못하고 사라진 경우다.
-        val nextCheckAt = Instant.now().plusSeconds(firstCheckAfterSeconds)
-        val paymentTransactionId = paymentTransactionService.createPending(command.paymentKey, order.id!!, moid, command.totalPrice, nextCheckAt)
+        val paymentTransactionId = paymentTransactionService.createPending(command.paymentKey, order.id!!, moid, command.totalPrice)
         val billingKey = companyBillingKeyRepository.findByCompanySeqAndPaymentSystem(command.companySeq, PaymentSystem.TOSS)
             ?: throw IllegalArgumentException("Toss billing key not found for company: ${command.companySeq}")
         return PrepareBillingPaymentResult.Ready(order.id!!, paymentTransactionId, command.orderKey, command.paymentKey, billingKey.billingKey, billingKey.customerKey, moid, command.orderName, command.totalPrice)
@@ -111,12 +102,5 @@ class PaymentWorkflowService(
     @Transactional
     fun failByTransactionId(paymentTransactionId: Long, failCode: String?, failMessage: String?) {
         paymentTransactionService.fail(paymentTransactionId, failCode, failMessage)
-    }
-
-    // 승인 호출이 끝났으므로 재처리와 겹칠 위험이 없다. 생성 시 잡아둔 대기(90초)를 기다리지 않고
-    // 바로 확인하게 당겨, 클라이언트가 폴링하는 동안 결론이 날 기회를 만든다.
-    @Transactional
-    fun checkNow(paymentTransactionId: Long) {
-        paymentTransactionService.scheduleNextCheck(paymentTransactionId, Instant.now())
     }
 }

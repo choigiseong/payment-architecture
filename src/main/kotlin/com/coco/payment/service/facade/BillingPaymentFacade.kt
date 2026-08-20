@@ -68,12 +68,8 @@ class BillingPaymentFacade(
                 // 이번 시도만 실패했을 뿐 주문은 아직 미결제 상태다(같은 orderKey로 재시도 가능).
                 BillingPaymentResult(result.orderKey, result.paymentKey, OrderStatus.PENDING_PAYMENT, PaymentTransactionStatus.FAILED, command.deliveryDate, null, approveResult.error.code, approveResult.error.message)
             }
-            is PaymentResult.Unknown -> {
-                // 승인 결과를 모르지만 호출은 끝났다. 재처리가 바로 확인하도록 당겨두면
-                // 클라이언트가 폴링하는 동안 결론이 날 수 있다.
-                paymentWorkflowService.checkNow(result.paymentTransactionId)
+            is PaymentResult.Unknown ->
                 BillingPaymentResult(result.orderKey, result.paymentKey, OrderStatus.PENDING_PAYMENT, PaymentTransactionStatus.PENDING, command.deliveryDate, null, approveResult.error.code, approveResult.error.message)
-            }
         }
     }
 

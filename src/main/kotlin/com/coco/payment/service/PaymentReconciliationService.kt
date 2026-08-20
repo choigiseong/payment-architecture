@@ -14,8 +14,8 @@ class PaymentReconciliationService(
     private val paymentTransactionService: PaymentTransactionService,
     private val paymentWorkflowService: PaymentWorkflowService,
     private val tossPaymentHandler: TossPaymentHandler,
-    @Value("\${payment.reconciliation.recheck-interval-seconds}")
-    private val recheckIntervalSeconds: Long,
+    @Value("\${payment.reconciliation.first-check-after-seconds}")
+    private val firstCheckAfterSeconds: Long,
     @Value("\${payment.reconciliation.net-cancel-after-seconds}")
     private val netCancelAfterSeconds: Long,
 ) {
@@ -29,7 +29,7 @@ class PaymentReconciliationService(
     @Scheduled(fixedDelayString = "\${payment.reconciliation.interval-ms}")
     fun reconcilePendingTransactions() {
         val now = Instant.now()
-        for (transaction in paymentTransactionService.findPendingDueForCheck(now)) {
+        for (transaction in paymentTransactionService.findPendingDueForCheck(now.minusSeconds(firstCheckAfterSeconds))) {
             // 건별로 격리한다. 하나가 실패해도 나머지가 이번 회차에서 빠지면 안 된다.
             try {
                 reconcile(transaction, now)
@@ -53,15 +53,10 @@ class PaymentReconciliationService(
             is PaymentResult.Failure ->
                 paymentWorkflowService.failByTransactionId(transaction.id!!, result.error.code, result.error.message)
             is PaymentResult.Unknown ->
-                // 조회로 확정하지 못했다(결제 내역이 없는 경우 포함). 기한 안이면 다시 확인하고,
-                // 넘겼으면 승인이 도달한 적 없는 것으로 보고 종료한다.
+                // 조회로 확정하지 못했다(결제 내역이 없는 경우 포함). 기한 안이면 다음 회차에 다시
+                // 걸리므로 아무것도 하지 않고, 넘겼으면 승인이 도달한 적 없는 것으로 보고 종료한다.
                 if (expired) {
                     paymentWorkflowService.failByTransactionId(transaction.id!!, NOT_CONFIRMED_CODE, "기한 안에 결제를 확인하지 못했습니다.")
-                } else {
-                    // TODO: 스케줄러 주기(30초)와 이 값이 같아서 미루기가 아무 일도 하지 않는다.
-                    //  이 줄을 지워도 next_check_at이 과거로 남아 다음 회차에 또 집히고, 그게 30초 뒤다.
-                    //  스케줄러를 더 빠르게 돌릴 계획이 없으면 프로퍼티와 함께 지우는 편이 낫다.
-                    paymentTransactionService.scheduleNextCheck(transaction.id!!, now.plusSeconds(recheckIntervalSeconds))
                 }
         }
     }

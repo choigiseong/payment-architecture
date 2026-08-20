@@ -16,19 +16,14 @@ class PaymentTransactionService(private val paymentTransactionRepository: Paymen
     fun findPendingByOrderSeq(orderSeq: Long) =
         paymentTransactionRepository.findByOrderSeqAndStatus(orderSeq, PaymentTransactionStatus.PENDING)
 
-    fun findPendingDueForCheck(now: Instant) =
-        paymentTransactionRepository.findPendingDueForCheck(PaymentTransactionStatus.PENDING, now)
+    fun findPendingDueForCheck(approveDoneBefore: Instant) =
+        paymentTransactionRepository.findPendingDueForCheck(PaymentTransactionStatus.PENDING, approveDoneBefore)
 
     @Transactional
-    fun createPending(paymentKey: String, orderId: Long, moid: String, amount: Long, nextCheckAt: Instant): Long {
-        val transaction = PaymentTransaction(null, paymentKey, orderId, moid, null, amount, PaymentTransactionStatus.PENDING, null, null, nextCheckAt, null, null)
+    fun createPending(paymentKey: String, orderId: Long, moid: String, amount: Long): Long {
+        val transaction = PaymentTransaction(null, paymentKey, orderId, moid, null, amount, PaymentTransactionStatus.PENDING, null, null, null, null)
         check(paymentTransactionRepository.insert(transaction) == 1) { "Failed to insert payment transaction" }
         return transaction.id!!
-    }
-
-    @Transactional
-    fun scheduleNextCheck(id: Long, nextCheckAt: Instant) {
-        check(paymentTransactionRepository.scheduleNextCheck(id, nextCheckAt) == 1) { "Failed to schedule next check" }
     }
 
     @Transactional

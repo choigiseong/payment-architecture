@@ -17,9 +17,10 @@ interface PaymentTransactionRepository {
         @Param("status") status: PaymentTransactionStatus,
     ): PaymentTransaction?
 
-    fun findPendingDueForCheck(@Param("status") status: PaymentTransactionStatus, @Param("now") now: Instant): List<PaymentTransaction>
-
-    fun scheduleNextCheck(@Param("id") id: Long, @Param("nextCheckAt") nextCheckAt: Instant): Int
+    fun findPendingDueForCheck(
+        @Param("status") status: PaymentTransactionStatus,
+        @Param("approveDoneBefore") approveDoneBefore: Instant,
+    ): List<PaymentTransaction>
 
     fun mark(
         @Param("id") id: Long,
