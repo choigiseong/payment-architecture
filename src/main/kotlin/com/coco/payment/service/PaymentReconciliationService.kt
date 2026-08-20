@@ -4,7 +4,6 @@ import com.coco.payment.handler.paymentgateway.dto.PaymentResult
 import com.coco.payment.handler.paymentgateway.toss.TossPaymentHandler
 import com.coco.payment.persistence.model.PaymentTransaction
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import java.time.Instant
@@ -14,10 +13,6 @@ class PaymentReconciliationService(
     private val paymentTransactionService: PaymentTransactionService,
     private val paymentWorkflowService: PaymentWorkflowService,
     private val tossPaymentHandler: TossPaymentHandler,
-    @Value("\${payment.reconciliation.first-check-after-seconds}")
-    private val firstCheckAfterSeconds: Long,
-    @Value("\${payment.reconciliation.net-cancel-after-seconds}")
-    private val netCancelAfterSeconds: Long,
 ) {
     // TODO: 거래마다 Toss 조회를 순차로 하고, 조회 하나가 최대 70초까지 걸린다. 미확정이 10건이면
     //  회차 하나가 12분 가까이 걸릴 수 있고, fixedDelay는 이전 회차가 끝나야 다음을 세므로 계속 밀린다.
@@ -29,7 +24,7 @@ class PaymentReconciliationService(
     @Scheduled(fixedDelayString = "\${payment.reconciliation.interval-ms}")
     fun reconcilePendingTransactions() {
         val now = Instant.now()
-        for (transaction in paymentTransactionService.findPendingDueForCheck(now.minusSeconds(firstCheckAfterSeconds))) {
+        for (transaction in paymentTransactionService.findPendingDueForCheck(PaymentTransaction.approveDoneBefore(now))) {
             // 건별로 격리한다. 하나가 실패해도 나머지가 이번 회차에서 빠지면 안 된다.
             try {
                 reconcile(transaction, now)
@@ -42,7 +37,7 @@ class PaymentReconciliationService(
     // 거래는 생성 후 정해진 기한 안에 성공이나 실패로 끝나야 한다. 기한을 넘기면 배송 마감을
     // 지킬 수 없으므로, 승인이 성공했더라도 되돌려 없던 일로 만든다.
     private fun reconcile(transaction: PaymentTransaction, now: Instant) {
-        val expired = transaction.createdAt!!.plusSeconds(netCancelAfterSeconds) <= now
+        val expired = transaction.isExpired(now)
         when (val result = tossPaymentHandler.inquiry(transaction.moid)) {
             is PaymentResult.Success ->
                 if (expired) {
