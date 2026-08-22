@@ -1,7 +1,17 @@
 package com.coco.payment.handler.paymentgateway.toss
 
+import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingKeyIssueRequest
+import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingKeyIssueResponse
 import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingPaymentCommand
+import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingPaymentRequest
+import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingPaymentResponse
 import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingPaymentResult
+import com.coco.payment.handler.paymentgateway.toss.dto.TossErrorResponse
+import com.coco.payment.handler.paymentgateway.toss.dto.TossPaymentCancelRequest
+import com.coco.payment.handler.paymentgateway.toss.dto.TossPaymentException
+import com.coco.payment.handler.paymentgateway.toss.dto.TossPaymentInquiryResponse
+import com.coco.payment.handler.paymentgateway.toss.dto.TossTransaction
+import com.coco.payment.handler.paymentgateway.toss.dto.TossTransactionResponse
 import com.coco.payment.handler.paymentgateway.dto.PaymentResult
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.beans.factory.annotation.Value
@@ -10,6 +20,7 @@ import org.springframework.http.client.ClientHttpResponse
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientException
+import java.time.LocalDateTime
 
 @Component
 class TossPaymentHandler(
@@ -126,6 +137,33 @@ class TossPaymentHandler(
         }
     }
 
+    // 시각은 서울 벽시계다 — Toss API가 존 없는 로컬 시각을 받는다.
+    fun transactions(startDate: LocalDateTime, endDate: LocalDateTime): List<TossTransaction> {
+        val all = mutableListOf<TossTransaction>()
+        var cursor: String? = null
+        do {
+            val page = tossRestClient.get()
+                .uri { builder ->
+                    builder.path("/v1/transactions")
+                        .queryParam("startDate", startDate)
+                        .queryParam("endDate", endDate)
+                        .queryParam("limit", TRANSACTIONS_PAGE_LIMIT)
+                        .apply { cursor?.let { queryParam("startingAfter", it) } }
+                        .build()
+                }
+                .headers { headers -> headers.setBasicAuth(secretKey, "") }
+                .retrieve()
+                .onStatus({ status -> status.isError }) { _, clientResponse ->
+                    throw toException(clientResponse, "Toss transactions inquiry failed")
+                }
+                .body(Array<TossTransactionResponse>::class.java)
+                ?: throw TossPaymentException(null, "Toss transactions response is empty")
+            all += page.map { TossTransaction(it.paymentKey, it.orderId, it.status, it.amount) }
+            cursor = page.lastOrNull()?.transactionKey
+        } while (page.size == TRANSACTIONS_PAGE_LIMIT)
+        return all
+    }
+
     // Toss는 오류 본문에 {"code": "...", "message": "..."} 형태로 사유를 준다.
     // 본문을 읽지 않으면 HTTP 상태 코드만 남아 "401"처럼 원인을 알 수 없는 값이 저장된다.
     private fun toException(clientResponse: ClientHttpResponse, fallbackMessage: String): TossPaymentException {
@@ -135,38 +173,8 @@ class TossPaymentHandler(
             message = error?.message ?: "$fallbackMessage: ${clientResponse.statusCode}",
         )
     }
+
+    companion object {
+        private const val TRANSACTIONS_PAGE_LIMIT = 5000
+    }
 }
-
-private data class TossErrorResponse(val code: String?, val message: String?)
-
-private data class TossBillingKeyIssueRequest(val customerKey: String, val authKey: String)
-
-private data class TossBillingKeyIssueResponse(val billingKey: String, val customerKey: String)
-
-private data class TossBillingPaymentRequest(
-    val customerKey: String,
-    val orderId: String,
-    val orderName: String,
-    val amount: Long,
-)
-
-private data class TossBillingPaymentResponse(
-    val paymentKey: String,
-    val orderId: String,
-    val totalAmount: Long,
-    val status: String,
-)
-
-private data class TossPaymentInquiryResponse(
-    val paymentKey: String,
-    val orderId: String,
-    val totalAmount: Long,
-    val status: String,
-)
-
-private data class TossPaymentCancelRequest(val cancelReason: String)
-
-private class TossPaymentException(
-    val code: String?,
-    message: String,
-) : RuntimeException(message)
