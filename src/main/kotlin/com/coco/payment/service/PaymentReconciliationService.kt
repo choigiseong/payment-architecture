@@ -16,11 +16,12 @@ class PaymentReconciliationService(
 ) {
     @Scheduled(fixedDelayString = "\${payment.reconciliation.interval-ms}")
     fun reconcilePendingTransactions() {
-        val now = Instant.now()
-        for (transaction in paymentTransactionService.findPendingDueForCheck(PaymentTransaction.approveDoneBefore(now))) {
+        for (transaction in paymentTransactionService.findPendingDueForCheck(PaymentTransaction.approveDoneBefore(Instant.now()))) {
             // 건별로 격리한다. 하나가 실패해도 나머지가 이번 회차에서 빠지면 안 된다.
             try {
-                reconcile(transaction, now)
+                // 조회가 순차라 회차가 210초를 넘길 수 있다. 회차 시작 시각으로 판정하면 뒤쪽 거래가
+                // 기한을 넘기고도 "기한 안"이 되어, 취소해야 할 것을 확정해 버린다.
+                reconcile(transaction, Instant.now())
             } catch (exception: Exception) {
                 log.error("Failed to reconcile payment transaction: ${transaction.id}", exception)
             }
