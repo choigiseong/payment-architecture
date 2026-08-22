@@ -2,10 +2,10 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.coco.payment.persistence.repository.CompanyRepository">
     <sql id="companyColumns">
-        r.id AS id,
-        r.company_name AS companyName,
-        r.created_at AS createdAt,
-        r.updated_at AS updatedAt
+        c.id AS id,
+        c.company_name AS companyName,
+        c.created_at AS createdAt,
+        c.updated_at AS updatedAt
     </sql>
 
     <insert id="insert" parameterType="com.coco.payment.persistence.model.Company"
@@ -16,7 +16,7 @@
 
     <select id="findById" resultType="company">
         SELECT <include refid="companyColumns" />
-        FROM company AS r
-        WHERE r.id = #{id}
+        FROM company AS c
+        WHERE c.id = #{id}
     </select>
 </mapper>
