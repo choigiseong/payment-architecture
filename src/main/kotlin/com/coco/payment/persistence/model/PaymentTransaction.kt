@@ -24,6 +24,8 @@ data class PaymentTransaction(
     companion object {
         // 승인 호출이 끝났다고 볼 수 있는 시간. 연결 10초 + 읽기 60초(Toss 권장 하한)보다 크게 잡는다.
         // 이 시간 안의 거래를 조회하면 진행 중인 승인과 겹쳐 CAS 0행이 되고 클라이언트는 500을 받는다.
+        // 다만 상한이 아니라 확률적 가정이다. 읽기 60초는 호출 총시간이 아니라 읽기 사이 간격이라
+        // (SimpleClientHttpRequestFactory의 SO_TIMEOUT), Toss가 바이트를 조금씩 흘리면 70초를 넘는다.
         private const val APPROVE_DONE_AFTER_SECONDS = 90L
 
         // 배송 마감 전에 결론이 나야 하므로 이 시간 안에 성공이나 실패로 끝낸다.

@@ -53,8 +53,13 @@ class PaymentReconciliationService(
         }
     }
 
-    // 이미 취소된 결제는 조회가 CANCELED를 돌려줘 위의 Failure 가지로 끝나므로 여기 오지 않는다.
-    // 그래서 취소 실패는 PENDING으로 남겨 다음 회차에 다시 시도해도 무한히 반복되지 않는다.
+    // 취소 실패는 PENDING으로 남겨 다음 회차가 다시 시도하게 한다. 이미 취소된 결제라면
+    // 조회가 CANCELED를 돌려줘 위의 Failure 가지로 끝나므로 여기 오지 않고, 그래서 그 경우는
+    // 반복되지 않는다.
+    // TODO: 그 외 사유(NOT_CANCELABLE_*, 정산 완료, PROVIDER_ERROR)로 실패하면 조회 DONE →
+    //  취소 시도 → 실패가 매 회차 영원히 돈다. 거래는 PENDING으로 갇혀 종료되지 않으므로
+    //  NOT_CONFIRMED만 보는 일일 대사에도 안 걸린다. 대사 대상에 "하루 넘게 PENDING인 거래"를
+    //  넣어 받는다(NOTES 3장 「거래대사」, 별도 브랜치).
     private fun netCancel(transaction: PaymentTransaction, tid: String) {
         val result = tossPaymentHandler.cancel(tid, "결제 확정 기한 초과")
         if (result is PaymentResult.Success) {
