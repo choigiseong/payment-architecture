@@ -24,6 +24,9 @@ class DailyReconciliationService(
     private val tossPaymentHandler: TossPaymentHandler,
     private val reconciliationDiscrepancyService: ReconciliationDiscrepancyService,
 ) {
+    // TODO: 아래 세 단계 모두 건별로 예외를 삼키고 로그만 남긴다. 재처리는 다음 회차가 다시
+    //  집으니 안전했지만, 대사는 창이 1일이고 결석 만회가 없어 빠진 거래가 영영 대사를 못 받는다.
+    //  실패 건수를 세어 마지막에 잡을 실패시키면 재실행으로 만회할 수 있다(NOTES 3장 참고).
     @Scheduled(cron = "\${payment.reconciliation.daily-cron}", zone = Dates.ZONE_ID)
     fun reconcileYesterday() {
         val windowEnd = Dates.today().atStartOfDay()
