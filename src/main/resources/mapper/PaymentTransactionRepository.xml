@@ -9,6 +9,7 @@
         pt.tid AS tid,
         pt.amount AS amount,
         pt.status AS status,
+        pt.approved_at AS approvedAt,
         pt.fail_code AS failCode,
         pt.fail_message AS failMessage,
         pt.created_at AS createdAt,
@@ -52,6 +53,7 @@
         UPDATE payment_transaction
         SET tid = #{tid},
             status = #{toStatus},
+            approved_at = #{approvedAt},
             fail_code = #{failCode},
             fail_message = #{failMessage}
         WHERE id = #{id}

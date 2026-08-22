@@ -22,14 +22,14 @@ class PaymentTransactionService(private val paymentTransactionRepository: Paymen
 
     @Transactional
     fun createPending(paymentKey: String, orderId: Long, moid: String, amount: Long): Long {
-        val transaction = PaymentTransaction(null, paymentKey, orderId, moid, null, amount, PaymentTransactionStatus.PENDING, null, null, null, null)
+        val transaction = PaymentTransaction(null, paymentKey, orderId, moid, null, amount, PaymentTransactionStatus.PENDING, null, null, null, null, null)
         check(paymentTransactionRepository.insert(transaction) == 1) { "Failed to insert payment transaction" }
         return transaction.id!!
     }
 
     @Transactional
-    fun complete(paymentTransactionId: Long, tid: String) {
-        check(paymentTransactionRepository.mark(paymentTransactionId, PaymentTransactionStatus.PENDING, PaymentTransactionStatus.SUCCESS, tid, null, null) == 1) {
+    fun complete(paymentTransactionId: Long, tid: String, approvedAt: Instant?) {
+        check(paymentTransactionRepository.mark(paymentTransactionId, PaymentTransactionStatus.PENDING, PaymentTransactionStatus.SUCCESS, tid, approvedAt, null, null) == 1) {
             "Failed to mark payment transaction as successful"
         }
     }
@@ -41,6 +41,7 @@ class PaymentTransactionService(private val paymentTransactionRepository: Paymen
             paymentTransactionId,
             PaymentTransactionStatus.PENDING,
             PaymentTransactionStatus.FAILED,
+            null,
             null,
             failCode,
             failMessage?.take(500),

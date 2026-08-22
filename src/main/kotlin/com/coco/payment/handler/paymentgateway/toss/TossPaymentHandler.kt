@@ -77,6 +77,7 @@ class TossPaymentHandler(
                     tid = response.paymentKey,
                     moid = response.orderId,
                     amount = response.totalAmount,
+                    approvedAt = response.approvedAt?.toInstant(),
                 )
             )
         } catch (exception: TossPaymentException) {
@@ -100,7 +101,7 @@ class TossPaymentHandler(
 
             when (response.status) {
                 "DONE" -> PaymentResult.Success(
-                    TossBillingPaymentResult(tid = response.paymentKey, moid = response.orderId, amount = response.totalAmount)
+                    TossBillingPaymentResult(tid = response.paymentKey, moid = response.orderId, amount = response.totalAmount, approvedAt = response.approvedAt?.toInstant())
                 )
                 "CANCELED", "PARTIAL_CANCELED", "ABORTED", "EXPIRED" ->
                     PaymentResult.Failure(PaymentResult.PaymentError(response.status, "Toss payment status: ${response.status}"))

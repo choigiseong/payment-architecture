@@ -1,5 +1,8 @@
 package com.coco.payment.handler.paymentgateway.toss.dto
 
+import java.time.Instant
+import java.time.OffsetDateTime
+
 data class TossBillingPaymentCommand(
     val billingKey: String,
     val customerKey: String,
@@ -12,6 +15,7 @@ data class TossBillingPaymentResult(
     val tid: String,
     val moid: String,
     val amount: Long,
+    val approvedAt: Instant?,
 )
 
 data class TossTransaction(
@@ -39,6 +43,7 @@ data class TossBillingPaymentResponse(
     val orderId: String,
     val totalAmount: Long,
     val status: String,
+    val approvedAt: OffsetDateTime?,
 )
 
 data class TossPaymentInquiryResponse(
@@ -46,6 +51,7 @@ data class TossPaymentInquiryResponse(
     val orderId: String,
     val totalAmount: Long,
     val status: String,
+    val approvedAt: OffsetDateTime?,
 )
 
 data class TossTransactionResponse(

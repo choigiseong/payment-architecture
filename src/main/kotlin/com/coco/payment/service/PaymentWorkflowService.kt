@@ -10,6 +10,7 @@ import com.coco.payment.service.exception.DeliveryDateChangedException
 import com.coco.payment.service.exception.OrderAlreadyPaidException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
 
 @Service
 class PaymentWorkflowService(
@@ -81,7 +82,7 @@ class PaymentWorkflowService(
     //  어느 쪽이든 취소 API나 스키마 변경이 따르므로 스케줄러 설계와 같이 정한다.
     @Transactional
     fun complete(prepared: PrepareBillingPaymentResult.Ready, result: TossBillingPaymentResult) {
-        paymentTransactionService.complete(prepared.paymentTransactionId, result.tid)
+        paymentTransactionService.complete(prepared.paymentTransactionId, result.tid, result.approvedAt)
         orderService.markPaid(prepared.orderId)
     }
 
@@ -93,10 +94,10 @@ class PaymentWorkflowService(
     }
 
     @Transactional
-    fun completeByTransactionId(paymentTransactionId: Long, tid: String) {
+    fun completeByTransactionId(paymentTransactionId: Long, tid: String, approvedAt: Instant?) {
         val transaction = paymentTransactionService.findById(paymentTransactionId)
             ?: error("Payment transaction not found: $paymentTransactionId")
-        paymentTransactionService.complete(paymentTransactionId, tid)
+        paymentTransactionService.complete(paymentTransactionId, tid, approvedAt)
         orderService.markPaid(transaction.orderSeq)
     }
 

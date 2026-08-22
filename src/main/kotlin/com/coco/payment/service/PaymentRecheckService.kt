@@ -38,7 +38,7 @@ class PaymentRecheckService(
                 if (expired) {
                     netCancel(transaction, result.value.tid)
                 } else {
-                    paymentWorkflowService.completeByTransactionId(transaction.id!!, result.value.tid)
+                    paymentWorkflowService.completeByTransactionId(transaction.id!!, result.value.tid, result.value.approvedAt)
                 }
             is PaymentResult.Failure ->
                 paymentWorkflowService.failByTransactionId(transaction.id!!, PaymentFailCode.PG_CANCELED, result.error.reason)

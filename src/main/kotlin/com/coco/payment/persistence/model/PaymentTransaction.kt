@@ -14,6 +14,7 @@ data class PaymentTransaction(
     val tid: String?,
     val amount: Long,
     val status: PaymentTransactionStatus,
+    val approvedAt: Instant?,
     val failCode: PaymentFailCode?,
     val failMessage: String?,
     var createdAt: Instant?,
