@@ -14,13 +14,6 @@ class PaymentReconciliationService(
     private val paymentWorkflowService: PaymentWorkflowService,
     private val tossPaymentHandler: TossPaymentHandler,
 ) {
-    // TODO: 거래마다 Toss 조회를 순차로 하고, 조회 하나가 최대 70초까지 걸린다. 미확정이 10건이면
-    //  회차 하나가 12분 가까이 걸릴 수 있고, fixedDelay는 이전 회차가 끝나야 다음을 세므로 계속 밀린다.
-    //  하필 Toss가 느릴 때 미확정이 가장 많이 쌓이므로 부하가 늘수록 처리가 느려지는 방향이다.
-    //  그러면 "생성 후 5분에 확정한다"가 지켜지지 않아 마감 전에 결론이 안 난다.
-    //  선택지: 회차당 시간 예산을 두고 남은 건 다음 회차로 / 조회를 병렬로.
-    //  타임아웃 축소는 선택지가 아니다 — Toss 문서가 "자동결제 승인·거래 조회는 최대 60초가 소요되니
-    //  타임아웃을 최소 60초로 설정하라"고 명시한다. 줄이면 우리가 스스로 미확정을 만든다.
     @Scheduled(fixedDelayString = "\${payment.reconciliation.interval-ms}")
     fun reconcilePendingTransactions() {
         val now = Instant.now()
@@ -50,6 +43,9 @@ class PaymentReconciliationService(
             is PaymentResult.Unknown ->
                 // 조회로 확정하지 못했다(결제 내역이 없는 경우 포함). 기한 안이면 다음 회차에 다시
                 // 걸리므로 아무것도 하지 않고, 넘겼으면 승인이 도달한 적 없는 것으로 보고 종료한다.
+                // TODO: 이 종료는 눈감고 내리는 결론이다. Toss가 죽어 조회가 계속 타임아웃이면 승인이
+                //  성공했는데도 FAILED로 끝나 돈이 유실된다. 하루 뒤 재조회하는 일일 대사가 받아줘야
+                //  정당해진다(NOTES 3장 「거래대사」, 별도 브랜치).
                 if (expired) {
                     paymentWorkflowService.failByTransactionId(transaction.id!!, NOT_CONFIRMED_CODE, "기한 안에 결제를 확인하지 못했습니다.")
                 }
