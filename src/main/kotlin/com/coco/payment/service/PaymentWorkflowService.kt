@@ -51,7 +51,7 @@ class PaymentWorkflowService(
 
         // PENDING 거래가 없어도 주문 자체가 이미 결제 완료일 수 있다(예: 폴링이 끝난 뒤 재처리가 확정한 경우).
         // 이때 같은 orderKey로 다시 들어오면 중복 승인이 되므로 주문 상태로 막는다.
-        if (order.isPaid) throw OrderAlreadyPaidException("이미 결제가 완료된 주문입니다.")
+        if (!order.acceptsPayment) throw OrderAlreadyPaidException("이미 결제가 완료된 주문입니다.")
 
         // 결제 전까지 보장일은 계약이 아니다. 마감을 넘겨 낡은 값이 저장돼 있으면
         // (예: 21:58 생성 주문을 22:10에 재시도) 지금 약속 가능한 값으로 갱신한다.
