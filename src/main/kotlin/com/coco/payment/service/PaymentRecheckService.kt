@@ -9,12 +9,12 @@ import org.springframework.stereotype.Service
 import java.time.Instant
 
 @Service
-class PaymentReconciliationService(
+class PaymentRecheckService(
     private val paymentTransactionService: PaymentTransactionService,
     private val paymentWorkflowService: PaymentWorkflowService,
     private val tossPaymentHandler: TossPaymentHandler,
 ) {
-    @Scheduled(fixedDelayString = "\${payment.reconciliation.interval-ms}")
+    @Scheduled(fixedDelayString = "\${payment.recheck.interval-ms}")
     fun reconcilePendingTransactions() {
         for (transaction in paymentTransactionService.findPendingDueForCheck(PaymentTransaction.approveDoneBefore(Instant.now()))) {
             // 건별로 격리한다. 하나가 실패해도 나머지가 이번 회차에서 빠지면 안 된다.
@@ -72,6 +72,6 @@ class PaymentReconciliationService(
     companion object {
         private const val NOT_CONFIRMED_CODE = "NOT_CONFIRMED"
         private const val NET_CANCEL_CODE = "NET_CANCEL"
-        private val log = LoggerFactory.getLogger(PaymentReconciliationService::class.java)
+        private val log = LoggerFactory.getLogger(PaymentRecheckService::class.java)
     }
 }
