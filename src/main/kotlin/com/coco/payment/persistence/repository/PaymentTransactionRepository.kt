@@ -23,6 +23,19 @@ interface PaymentTransactionRepository {
         @Param("approveDoneBefore") approveDoneBefore: Instant,
     ): List<PaymentTransaction>
 
+    fun findByMoid(@Param("moid") moid: String): PaymentTransaction?
+
+    fun findByStatusAndApprovedAtBetween(
+        @Param("status") status: PaymentTransactionStatus,
+        @Param("from") from: Instant,
+        @Param("to") to: Instant,
+    ): List<PaymentTransaction>
+
+    fun findByStatusAndCreatedAtBefore(
+        @Param("status") status: PaymentTransactionStatus,
+        @Param("before") before: Instant,
+    ): List<PaymentTransaction>
+
     fun mark(
         @Param("id") id: Long,
         @Param("fromStatus") fromStatus: PaymentTransactionStatus,

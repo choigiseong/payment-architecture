@@ -20,13 +20,6 @@ data class TossBillingPaymentResult(
     val approvedAt: Instant?,
 )
 
-data class TossTransaction(
-    val tid: String,
-    val orderId: String,
-    val status: String,
-    val amount: Long,
-)
-
 data class TossErrorResponse(val code: String?, val message: String?)
 
 data class TossBillingKeyIssueRequest(val customerKey: String, val authKey: String)

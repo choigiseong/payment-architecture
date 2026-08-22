@@ -20,6 +20,12 @@ data class PaymentTransaction(
     var createdAt: Instant?,
     var updatedAt: Instant?,
 ) {
+    val isSuccess: Boolean get() = status == PaymentTransactionStatus.SUCCESS
+
+    val isFailed: Boolean get() = status == PaymentTransactionStatus.FAILED
+
+    fun hasSameAmount(amount: Long) = this.amount == amount
+
     // 확정 기한을 넘겼는가. 넘기면 승인이 성공했더라도 되돌린다.
     fun isExpired(now: Instant) = createdAt!!.plusSeconds(CONFIRM_DEADLINE_SECONDS) <= now
 

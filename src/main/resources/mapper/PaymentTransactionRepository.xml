@@ -49,6 +49,27 @@
         ORDER BY pt.created_at
     </select>
 
+    <select id="findByMoid" resultType="payment_transaction">
+        SELECT <include refid="paymentTransactionColumns" />
+        FROM payment_transaction AS pt
+        WHERE pt.moid = #{moid}
+    </select>
+
+    <select id="findByStatusAndApprovedAtBetween" resultType="payment_transaction">
+        SELECT <include refid="paymentTransactionColumns" />
+        FROM payment_transaction AS pt
+        WHERE pt.status = #{status}
+          AND pt.approved_at &gt;= #{from} AND pt.approved_at &lt; #{to}
+    </select>
+
+    <select id="findByStatusAndCreatedAtBefore" resultType="payment_transaction">
+        SELECT <include refid="paymentTransactionColumns" />
+        FROM payment_transaction AS pt
+        WHERE pt.status = #{status}
+          AND pt.created_at &lt; #{before}
+        ORDER BY pt.created_at
+    </select>
+
     <update id="mark">
         UPDATE payment_transaction
         SET tid = #{tid},

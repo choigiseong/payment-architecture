@@ -20,6 +20,14 @@ class PaymentTransactionService(private val paymentTransactionRepository: Paymen
     fun findPendingDueForCheck(approveDoneBefore: Instant) =
         paymentTransactionRepository.findPendingDueForCheck(PaymentTransactionStatus.PENDING, approveDoneBefore)
 
+    fun findByMoid(moid: String) = paymentTransactionRepository.findByMoid(moid)
+
+    fun findSuccessesApprovedBetween(from: Instant, to: Instant) =
+        paymentTransactionRepository.findByStatusAndApprovedAtBetween(PaymentTransactionStatus.SUCCESS, from, to)
+
+    fun findPendingsCreatedBefore(before: Instant) =
+        paymentTransactionRepository.findByStatusAndCreatedAtBefore(PaymentTransactionStatus.PENDING, before)
+
     @Transactional
     fun createPending(paymentKey: String, orderId: Long, moid: String, amount: Long): Long {
         val transaction = PaymentTransaction(null, paymentKey, orderId, moid, null, amount, PaymentTransactionStatus.PENDING, null, null, null, null, null)
@@ -47,5 +55,20 @@ class PaymentTransactionService(private val paymentTransactionRepository: Paymen
             failMessage?.take(500),
         )
         check(marked == 1) { "Failed to mark payment transaction as failed" }
+    }
+
+    // 이미 FAILED인 거래를 대사가 뒤늦게 취소했을 때, 상태는 그대로 두고 사유와 tid만 남긴다.
+    @Transactional
+    fun overwriteFailure(paymentTransactionId: Long, tid: String?, failCode: PaymentFailCode, failMessage: String) {
+        val marked = paymentTransactionRepository.mark(
+            paymentTransactionId,
+            PaymentTransactionStatus.FAILED,
+            PaymentTransactionStatus.FAILED,
+            tid,
+            null,
+            failCode,
+            failMessage.take(500),
+        )
+        check(marked == 1) { "Failed to overwrite failure reason" }
     }
 }

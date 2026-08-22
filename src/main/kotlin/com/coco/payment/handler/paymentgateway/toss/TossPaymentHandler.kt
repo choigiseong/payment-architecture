@@ -9,9 +9,10 @@ import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingPaymentResult
 import com.coco.payment.handler.paymentgateway.toss.dto.TossPaymentCancelRequest
 import com.coco.payment.handler.paymentgateway.toss.dto.TossPaymentException
 import com.coco.payment.handler.paymentgateway.toss.dto.TossPaymentInquiryResponse
-import com.coco.payment.handler.paymentgateway.toss.dto.TossTransaction
 import com.coco.payment.handler.paymentgateway.toss.dto.TossTransactionResponse
 import com.coco.payment.handler.paymentgateway.dto.PaymentResult
+import com.coco.payment.handler.paymentgateway.dto.PgTransaction
+import com.coco.payment.persistence.enumerator.PgPaymentStatus
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.MediaType
@@ -137,8 +138,8 @@ class TossPaymentHandler(
     }
 
     // 시각은 서울 벽시계다 — Toss API가 존 없는 로컬 시각을 받는다.
-    fun transactions(startDate: LocalDateTime, endDate: LocalDateTime): List<TossTransaction> {
-        val all = mutableListOf<TossTransaction>()
+    fun transactions(startDate: LocalDateTime, endDate: LocalDateTime): List<PgTransaction> {
+        val all = mutableListOf<PgTransaction>()
         var cursor: String? = null
         do {
             val page = tossRestClient.get()
@@ -157,10 +158,17 @@ class TossPaymentHandler(
                 }
                 .body(Array<TossTransactionResponse>::class.java)
                 ?: throw TossPaymentException(null, "Toss transactions response is empty")
-            all += page.map { TossTransaction(it.paymentKey, it.orderId, it.status, it.amount) }
+            all += page.map { PgTransaction(it.paymentKey, it.orderId, toPgPaymentStatus(it.status), it.status, it.amount) }
             cursor = page.lastOrNull()?.transactionKey
         } while (page.size == TRANSACTIONS_PAGE_LIMIT)
         return all
+    }
+
+    // inquiry()의 상태 분기와 같은 판정이다. Toss 어휘를 아는 곳은 이 핸들러뿐이어야 한다.
+    private fun toPgPaymentStatus(status: String): PgPaymentStatus = when (status) {
+        "DONE" -> PgPaymentStatus.PAID
+        "CANCELED", "PARTIAL_CANCELED", "ABORTED", "EXPIRED" -> PgPaymentStatus.CANCELED
+        else -> PgPaymentStatus.UNKNOWN
     }
 
     companion object {

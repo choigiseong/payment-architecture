@@ -45,9 +45,7 @@ class PaymentRecheckService(
             is PaymentResult.Unknown ->
                 // 조회로 확정하지 못했다(결제 내역이 없는 경우 포함). 기한 안이면 다음 회차에 다시
                 // 걸리므로 아무것도 하지 않고, 넘겼으면 승인이 도달한 적 없는 것으로 보고 종료한다.
-                // TODO: 이 종료는 눈감고 내리는 결론이다. Toss가 죽어 조회가 계속 타임아웃이면 승인이
-                //  성공했는데도 FAILED로 끝나 돈이 유실된다. 하루 뒤 재조회하는 일일 대사가 받아줘야
-                //  정당해진다(NOTES 3장 「거래대사」, 별도 브랜치).
+                // 눈감고 내리는 결론이지만, 승인이 실제로 성공한 거래였다면 다음날 대사가 대조해 취소한다.
                 if (expired) {
                     paymentWorkflowService.failByTransactionId(transaction.id!!, PaymentFailCode.NOT_CONFIRMED, "기한 안에 결제를 확인하지 못했습니다.")
                 }
