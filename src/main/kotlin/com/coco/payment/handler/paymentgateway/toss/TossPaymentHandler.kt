@@ -6,7 +6,6 @@ import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingPaymentComman
 import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingPaymentRequest
 import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingPaymentResponse
 import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingPaymentResult
-import com.coco.payment.handler.paymentgateway.toss.dto.TossErrorResponse
 import com.coco.payment.handler.paymentgateway.toss.dto.TossPaymentCancelRequest
 import com.coco.payment.handler.paymentgateway.toss.dto.TossPaymentException
 import com.coco.payment.handler.paymentgateway.toss.dto.TossPaymentInquiryResponse
@@ -16,7 +15,6 @@ import com.coco.payment.handler.paymentgateway.dto.PaymentResult
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.MediaType
-import org.springframework.http.client.ClientHttpResponse
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientException
@@ -44,7 +42,7 @@ class TossPaymentHandler(
             .body(TossBillingKeyIssueRequest(customerKey, authKey))
             .retrieve()
             .onStatus({ status -> status.isError }) { _, clientResponse ->
-                throw toException(clientResponse, "Toss billing key issue failed")
+                throw TossPaymentException.from(objectMapper, clientResponse, "Toss billing key issue failed")
             }
             .body(TossBillingKeyIssueResponse::class.java)
             ?: throw TossPaymentException(null, "Toss billing key issue response is empty")
@@ -67,7 +65,7 @@ class TossPaymentHandler(
                 )
                 .retrieve()
                 .onStatus({ status -> status.isError }) { _, clientResponse ->
-                    throw toException(clientResponse, "Toss billing payment failed")
+                    throw TossPaymentException.from(objectMapper, clientResponse, "Toss billing payment failed")
                 }
                 .body(TossBillingPaymentResponse::class.java)
                 ?: return PaymentResult.Unknown(PaymentResult.PaymentError(null, "Toss billing payment response is empty"))
@@ -94,7 +92,7 @@ class TossPaymentHandler(
                 .headers { headers -> headers.setBasicAuth(secretKey, "") }
                 .retrieve()
                 .onStatus({ status -> status.isError }) { _, clientResponse ->
-                    throw toException(clientResponse, "Toss payment inquiry failed")
+                    throw TossPaymentException.from(objectMapper, clientResponse, "Toss payment inquiry failed")
                 }
                 .body(TossPaymentInquiryResponse::class.java)
                 ?: return PaymentResult.Unknown(PaymentResult.PaymentError(null, "Toss payment inquiry response is empty"))
@@ -126,7 +124,7 @@ class TossPaymentHandler(
                 .body(TossPaymentCancelRequest(cancelReason))
                 .retrieve()
                 .onStatus({ status -> status.isError }) { _, clientResponse ->
-                    throw toException(clientResponse, "Toss payment cancel failed")
+                    throw TossPaymentException.from(objectMapper, clientResponse, "Toss payment cancel failed")
                 }
                 .toBodilessEntity()
 
@@ -155,7 +153,7 @@ class TossPaymentHandler(
                 .headers { headers -> headers.setBasicAuth(secretKey, "") }
                 .retrieve()
                 .onStatus({ status -> status.isError }) { _, clientResponse ->
-                    throw toException(clientResponse, "Toss transactions inquiry failed")
+                    throw TossPaymentException.from(objectMapper, clientResponse, "Toss transactions inquiry failed")
                 }
                 .body(Array<TossTransactionResponse>::class.java)
                 ?: throw TossPaymentException(null, "Toss transactions response is empty")
@@ -163,16 +161,6 @@ class TossPaymentHandler(
             cursor = page.lastOrNull()?.transactionKey
         } while (page.size == TRANSACTIONS_PAGE_LIMIT)
         return all
-    }
-
-    // Toss는 오류 본문에 {"code": "...", "message": "..."} 형태로 사유를 준다.
-    // 본문을 읽지 않으면 HTTP 상태 코드만 남아 "401"처럼 원인을 알 수 없는 값이 저장된다.
-    private fun toException(clientResponse: ClientHttpResponse, fallbackMessage: String): TossPaymentException {
-        val error = runCatching { objectMapper.readValue(clientResponse.body, TossErrorResponse::class.java) }.getOrNull()
-        return TossPaymentException(
-            code = error?.code ?: clientResponse.statusCode.value().toString(),
-            message = error?.message ?: "$fallbackMessage: ${clientResponse.statusCode}",
-        )
     }
 
     companion object {

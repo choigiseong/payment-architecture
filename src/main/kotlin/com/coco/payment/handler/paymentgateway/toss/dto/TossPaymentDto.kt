@@ -1,5 +1,7 @@
 package com.coco.payment.handler.paymentgateway.toss.dto
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import org.springframework.http.client.ClientHttpResponse
 import java.time.Instant
 import java.time.OffsetDateTime
 
@@ -67,4 +69,16 @@ data class TossPaymentCancelRequest(val cancelReason: String)
 class TossPaymentException(
     val code: String?,
     message: String,
-) : RuntimeException(message)
+) : RuntimeException(message) {
+    companion object {
+        // Toss는 오류 본문에 {"code": "...", "message": "..."} 형태로 사유를 준다.
+        // 본문을 읽지 않으면 HTTP 상태 코드만 남아 "401"처럼 원인을 알 수 없는 값이 저장된다.
+        fun from(objectMapper: ObjectMapper, clientResponse: ClientHttpResponse, fallbackMessage: String): TossPaymentException {
+            val error = runCatching { objectMapper.readValue(clientResponse.body, TossErrorResponse::class.java) }.getOrNull()
+            return TossPaymentException(
+                code = error?.code ?: clientResponse.statusCode.value().toString(),
+                message = error?.message ?: "$fallbackMessage: ${clientResponse.statusCode}",
+            )
+        }
+    }
+}
