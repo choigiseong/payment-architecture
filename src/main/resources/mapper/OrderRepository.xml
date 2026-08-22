@@ -2,14 +2,14 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.coco.payment.persistence.repository.OrderRepository">
     <sql id="orderColumns">
-        r.id AS id,
-        r.order_key AS orderKey,
-        r.company_seq AS companySeq,
-        r.total_price AS totalPrice,
-        r.delivery_date AS deliveryDate,
-        r.status AS status,
-        r.created_at AS createdAt,
-        r.updated_at AS updatedAt
+        o.id AS id,
+        o.order_key AS orderKey,
+        o.company_seq AS companySeq,
+        o.total_price AS totalPrice,
+        o.delivery_date AS deliveryDate,
+        o.status AS status,
+        o.created_at AS createdAt,
+        o.updated_at AS updatedAt
     </sql>
 
     <insert id="insert" parameterType="com.coco.payment.persistence.model.Order"
@@ -20,20 +20,20 @@
 
     <select id="findById" resultType="order">
         SELECT <include refid="orderColumns" />
-        FROM "order" AS r
-        WHERE r.id = #{id}
+        FROM "order" AS o
+        WHERE o.id = #{id}
     </select>
 
     <select id="findByOrderKey" resultType="order">
         SELECT <include refid="orderColumns" />
-        FROM "order" AS r
-        WHERE r.order_key = #{orderKey}
+        FROM "order" AS o
+        WHERE o.order_key = #{orderKey}
     </select>
 
     <select id="findByOrderKeyForUpdate" resultType="order">
         SELECT <include refid="orderColumns" />
-        FROM "order" AS r
-        WHERE r.order_key = #{orderKey}
+        FROM "order" AS o
+        WHERE o.order_key = #{orderKey}
         FOR UPDATE
     </select>
 
@@ -49,4 +49,12 @@
         SET delivery_date = #{deliveryDate}
         WHERE id = #{id}
     </update>
+
+    <select id="findByDeliveryDateAndStatus" resultType="order">
+        SELECT <include refid="orderColumns" />
+        FROM "order" AS o
+        WHERE o.delivery_date = #{deliveryDate}
+          AND o.status = #{status}
+        ORDER BY o.id
+    </select>
 </mapper>

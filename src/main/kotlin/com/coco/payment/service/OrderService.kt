@@ -7,12 +7,11 @@ import com.coco.payment.persistence.repository.OrderItemRepository
 import com.coco.payment.persistence.repository.OrderRepository
 import com.coco.payment.service.dto.BillingOrderItem
 import com.coco.payment.service.dto.BillingPaymentItem
+import com.coco.payment.support.Dates
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.ZoneId
 
 @Service
 class OrderService(
@@ -34,10 +33,15 @@ class OrderService(
 
     // 마감(22시) 전 주문은 오늘 배치를 타서 내일 도착, 이후 주문은 다음 배치라 모레 도착.
     fun computeDeliveryDate(): LocalDate {
-        val now = LocalDateTime.now(SEOUL)
+        val now = Dates.now()
         val daysToAdd = if (now.hour < deliveryCutoffHour) 1L else 2L
         return now.toLocalDate().plusDays(daysToAdd)
     }
+
+    // TODO: 전체를 한 번에 읽는다. 주문이 많아지면 id 기준 seek 페이징으로 나눠 조회한다.
+    //  처리하면서 상태가 바뀌어 대상에서 빠지므로 offset 페이징은 건너뛰는 건을 만든다.
+    fun findByDeliveryDateAndStatus(deliveryDate: LocalDate, status: OrderStatus) =
+        orderRepository.findByDeliveryDateAndStatus(deliveryDate, status)
 
     fun findByOrderKey(orderKey: String) = orderRepository.findByOrderKey(orderKey)
     fun findByOrderKeyForUpdate(orderKey: String) = orderRepository.findByOrderKeyForUpdate(orderKey)
@@ -73,7 +77,10 @@ class OrderService(
         check(orderRepository.updateDeliveryDate(orderId, deliveryDate) == 1) { "Failed to update delivery date" }
     }
 
-    companion object {
-        private val SEOUL = ZoneId.of("Asia/Seoul")
+    @Transactional
+    fun markPreparing(orderId: Long) {
+        check(orderRepository.mark(orderId, OrderStatus.PAID, OrderStatus.PREPARING) == 1) {
+            "Failed to mark order as preparing"
+        }
     }
 }

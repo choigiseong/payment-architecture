@@ -2,57 +2,51 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.coco.payment.persistence.repository.PaymentTransactionRepository">
     <sql id="paymentTransactionColumns">
-        r.id AS id,
-        r.payment_key AS paymentKey,
-        r.order_seq AS orderSeq,
-        r.moid AS moid,
-        r.tid AS tid,
-        r.amount AS amount,
-        r.status AS status,
-        r.fail_code AS failCode,
-        r.fail_message AS failMessage,
-        r.expired_at AS expiredAt,
-        r.created_at AS createdAt,
-        r.updated_at AS updatedAt
+        pt.id AS id,
+        pt.payment_key AS paymentKey,
+        pt.order_seq AS orderSeq,
+        pt.moid AS moid,
+        pt.tid AS tid,
+        pt.amount AS amount,
+        pt.status AS status,
+        pt.fail_code AS failCode,
+        pt.fail_message AS failMessage,
+        pt.created_at AS createdAt,
+        pt.updated_at AS updatedAt
     </sql>
 
     <insert id="insert" parameterType="com.coco.payment.persistence.model.PaymentTransaction"
             useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO payment_transaction (payment_key, order_seq, moid, tid, amount, status, expired_at)
-        VALUES (#{paymentKey}, #{orderSeq}, #{moid}, #{tid}, #{amount}, #{status}, #{expiredAt})
+        INSERT INTO payment_transaction (payment_key, order_seq, moid, tid, amount, status)
+        VALUES (#{paymentKey}, #{orderSeq}, #{moid}, #{tid}, #{amount}, #{status})
     </insert>
 
     <select id="findById" resultType="payment_transaction">
         SELECT <include refid="paymentTransactionColumns" />
-        FROM payment_transaction AS r
-        WHERE r.id = #{id}
+        FROM payment_transaction AS pt
+        WHERE pt.id = #{id}
     </select>
 
     <select id="findByPaymentKey" resultType="payment_transaction">
         SELECT <include refid="paymentTransactionColumns" />
-        FROM payment_transaction AS r
-        WHERE r.payment_key = #{paymentKey}
+        FROM payment_transaction AS pt
+        WHERE pt.payment_key = #{paymentKey}
     </select>
 
     <select id="findByOrderSeqAndStatus" resultType="payment_transaction">
         SELECT <include refid="paymentTransactionColumns" />
-        FROM payment_transaction AS r
-        WHERE r.order_seq = #{orderSeq}
-          AND r.status = #{status}
+        FROM payment_transaction AS pt
+        WHERE pt.order_seq = #{orderSeq}
+          AND pt.status = #{status}
     </select>
 
-    <select id="findExpiredPending" resultType="payment_transaction">
+    <select id="findPendingDueForCheck" resultType="payment_transaction">
         SELECT <include refid="paymentTransactionColumns" />
-        FROM payment_transaction AS r
-        WHERE r.status = #{status}
-          AND r.expired_at &lt; #{now}
+        FROM payment_transaction AS pt
+        WHERE pt.status = #{status}
+          AND pt.created_at &lt;= #{approveDoneBefore}
+        ORDER BY pt.created_at
     </select>
-
-    <update id="extendExpiry">
-        UPDATE payment_transaction
-        SET expired_at = #{expiredAt}
-        WHERE id = #{id}
-    </update>
 
     <update id="mark">
         UPDATE payment_transaction

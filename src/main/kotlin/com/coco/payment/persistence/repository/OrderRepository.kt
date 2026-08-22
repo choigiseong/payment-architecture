@@ -17,4 +17,9 @@ interface OrderRepository {
     fun mark(@Param("id") id: Long, @Param("fromStatus") fromStatus: OrderStatus, @Param("toStatus") toStatus: OrderStatus): Int
 
     fun updateDeliveryDate(@Param("id") id: Long, @Param("deliveryDate") deliveryDate: LocalDate): Int
+
+    fun findByDeliveryDateAndStatus(
+        @Param("deliveryDate") deliveryDate: LocalDate,
+        @Param("status") status: OrderStatus,
+    ): List<Order>
 }
