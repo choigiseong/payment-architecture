@@ -2,6 +2,7 @@ package com.coco.payment.service
 
 import com.coco.payment.handler.paymentgateway.dto.PaymentResult
 import com.coco.payment.handler.paymentgateway.toss.TossPaymentHandler
+import com.coco.payment.persistence.enumerator.PaymentFailCode
 import com.coco.payment.persistence.model.PaymentTransaction
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
@@ -40,7 +41,7 @@ class PaymentRecheckService(
                     paymentWorkflowService.completeByTransactionId(transaction.id!!, result.value.tid)
                 }
             is PaymentResult.Failure ->
-                paymentWorkflowService.failByTransactionId(transaction.id!!, result.error.code, result.error.message)
+                paymentWorkflowService.failByTransactionId(transaction.id!!, PaymentFailCode.PG_CANCELED, result.error.reason)
             is PaymentResult.Unknown ->
                 // 조회로 확정하지 못했다(결제 내역이 없는 경우 포함). 기한 안이면 다음 회차에 다시
                 // 걸리므로 아무것도 하지 않고, 넘겼으면 승인이 도달한 적 없는 것으로 보고 종료한다.
@@ -48,7 +49,7 @@ class PaymentRecheckService(
                 //  성공했는데도 FAILED로 끝나 돈이 유실된다. 하루 뒤 재조회하는 일일 대사가 받아줘야
                 //  정당해진다(NOTES 3장 「거래대사」, 별도 브랜치).
                 if (expired) {
-                    paymentWorkflowService.failByTransactionId(transaction.id!!, NOT_CONFIRMED_CODE, "기한 안에 결제를 확인하지 못했습니다.")
+                    paymentWorkflowService.failByTransactionId(transaction.id!!, PaymentFailCode.NOT_CONFIRMED, "기한 안에 결제를 확인하지 못했습니다.")
                 }
         }
     }
@@ -63,15 +64,13 @@ class PaymentRecheckService(
     private fun netCancel(transaction: PaymentTransaction, tid: String) {
         val result = tossPaymentHandler.cancel(tid, "결제 확정 기한 초과")
         if (result is PaymentResult.Success) {
-            paymentWorkflowService.failByTransactionId(transaction.id!!, NET_CANCEL_CODE, "확정 기한을 넘겨 결제를 취소했습니다.")
+            paymentWorkflowService.failByTransactionId(transaction.id!!, PaymentFailCode.NET_CANCEL, "확정 기한을 넘겨 결제를 취소했습니다.")
             return
         }
         log.error("Failed to cancel payment transaction: ${transaction.id}, tid: $tid")
     }
 
     companion object {
-        private const val NOT_CONFIRMED_CODE = "NOT_CONFIRMED"
-        private const val NET_CANCEL_CODE = "NET_CANCEL"
         private val log = LoggerFactory.getLogger(PaymentRecheckService::class.java)
     }
 }

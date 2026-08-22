@@ -2,6 +2,7 @@ package com.coco.payment.service
 
 import com.coco.payment.service.dto.BillingPaymentCommand
 import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingPaymentResult
+import com.coco.payment.persistence.enumerator.PaymentFailCode
 import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.persistence.repository.CompanyBillingKeyRepository
 import com.coco.payment.service.dto.PrepareBillingPaymentResult
@@ -87,7 +88,7 @@ class PaymentWorkflowService(
     // 실패는 "이번 시도"의 결과일 뿐 주문의 종료 상태가 아니다. 같은 orderKey로 재시도할 수 있으므로
     // 주문은 결제될 때까지 PENDING_PAYMENT로 두고, 시도별 결과는 payment_transaction에만 남긴다.
     @Transactional
-    fun fail(prepared: PrepareBillingPaymentResult.Ready, failCode: String?, failMessage: String?) {
+    fun fail(prepared: PrepareBillingPaymentResult.Ready, failCode: PaymentFailCode, failMessage: String?) {
         paymentTransactionService.fail(prepared.paymentTransactionId, failCode, failMessage)
     }
 
@@ -100,7 +101,7 @@ class PaymentWorkflowService(
     }
 
     @Transactional
-    fun failByTransactionId(paymentTransactionId: Long, failCode: String?, failMessage: String?) {
+    fun failByTransactionId(paymentTransactionId: Long, failCode: PaymentFailCode, failMessage: String?) {
         paymentTransactionService.fail(paymentTransactionId, failCode, failMessage)
     }
 }

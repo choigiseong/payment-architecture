@@ -1,6 +1,7 @@
 package com.coco.payment.persistence.converter
 
 import com.coco.payment.persistence.enumerator.OrderStatus
+import com.coco.payment.persistence.enumerator.PaymentFailCode
 import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.persistence.enumerator.PaymentTransactionStatus
 import org.apache.ibatis.type.BaseTypeHandler
@@ -26,3 +27,6 @@ class OrderStatusTypeHandler : EnumCodeTypeHandler<OrderStatus>(OrderStatus.entr
 
 @MappedTypes(PaymentTransactionStatus::class)
 class PaymentTransactionStatusTypeHandler : EnumCodeTypeHandler<PaymentTransactionStatus>(PaymentTransactionStatus.entries.toTypedArray(), PaymentTransactionStatus::code)
+
+@MappedTypes(PaymentFailCode::class)
+class PaymentFailCodeTypeHandler : EnumCodeTypeHandler<PaymentFailCode>(PaymentFailCode.entries.toTypedArray(), PaymentFailCode::code)

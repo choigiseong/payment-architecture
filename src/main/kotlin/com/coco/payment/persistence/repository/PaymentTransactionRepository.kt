@@ -1,6 +1,7 @@
 package com.coco.payment.persistence.repository
 
 import com.coco.payment.persistence.model.PaymentTransaction
+import com.coco.payment.persistence.enumerator.PaymentFailCode
 import com.coco.payment.persistence.enumerator.PaymentTransactionStatus
 import org.apache.ibatis.annotations.Param
 import java.time.Instant
@@ -27,7 +28,7 @@ interface PaymentTransactionRepository {
         @Param("fromStatus") fromStatus: PaymentTransactionStatus,
         @Param("toStatus") toStatus: PaymentTransactionStatus,
         @Param("tid") tid: String?,
-        @Param("failCode") failCode: String?,
+        @Param("failCode") failCode: PaymentFailCode?,
         @Param("failMessage") failMessage: String?,
     ): Int
 }
