@@ -102,7 +102,7 @@ class PaymentWorkflowService(
     }
 
     @Transactional
-    fun failByTransactionId(paymentTransactionId: Long, failCode: PaymentFailCode, failMessage: String?) {
-        paymentTransactionService.fail(paymentTransactionId, failCode, failMessage)
+    fun failByTransactionId(paymentTransactionId: Long, failCode: PaymentFailCode, failMessage: String?, tid: String? = null) {
+        paymentTransactionService.fail(paymentTransactionId, failCode, failMessage, tid)
     }
 }

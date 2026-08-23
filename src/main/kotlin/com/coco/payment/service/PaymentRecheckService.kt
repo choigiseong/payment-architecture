@@ -60,7 +60,7 @@ class PaymentRecheckService(
     private fun netCancel(transaction: PaymentTransaction, tid: String) {
         val result = tossPaymentHandler.cancel(tid, "결제 확정 기한 초과")
         if (result is PaymentResult.Success) {
-            paymentWorkflowService.failByTransactionId(transaction.id!!, PaymentFailCode.NET_CANCEL, "확정 기한을 넘겨 결제를 취소했습니다.")
+            paymentWorkflowService.failByTransactionId(transaction.id!!, PaymentFailCode.NET_CANCEL, "확정 기한을 넘겨 결제를 취소했습니다.", tid)
             return
         }
         log.error("Failed to cancel payment transaction: ${transaction.id}, tid: $tid")
