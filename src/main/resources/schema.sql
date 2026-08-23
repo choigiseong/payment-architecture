@@ -47,8 +47,9 @@ CREATE TABLE payment_transaction (
     tid VARCHAR(100) COMMENT 'PG의 결제 키. 승인 응답에만 들어 있어 취소하려면 이 값이 필요하다',
     amount BIGINT NOT NULL COMMENT '승인 요청 금액',
     status SMALLINT NOT NULL COMMENT 'PaymentTransactionStatus 코드',
-    fail_code VARCHAR(100) COMMENT '실패 사유 코드. 승인 실패, 재처리의 종결 사유, 대사의 취소 결과가 여기 남는다',
-    fail_message VARCHAR(500) COMMENT '실패 사유 메시지',
+    approved_at TIMESTAMP COMMENT 'PG가 알려준 승인 시각. 대사가 우리 목록과 PG 목록을 같은 축으로 자르는 기준',
+    fail_code SMALLINT COMMENT '실패 사유. PaymentFailCode 코드. 승인 실패, 재처리의 종결 사유, 대사의 취소 결과가 여기 남는다',
+    fail_message VARCHAR(500) COMMENT '실패 사유 메시지. PG가 준 코드와 메시지는 여기에 원문으로 남는다',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 시각. 첫 확인 대기와 확정 기한이 모두 이 값에서 계산된다',
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT uk_payment_transaction_payment_key UNIQUE (payment_key)
