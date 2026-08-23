@@ -55,10 +55,8 @@ class PaymentRecheckService(
     // 취소 실패는 PENDING으로 남겨 다음 회차가 다시 시도하게 한다. 이미 취소된 결제라면
     // 조회가 CANCELED를 돌려줘 위의 Failure 가지로 끝나므로 여기 오지 않고, 그래서 그 경우는
     // 반복되지 않는다.
-    // TODO: 그 외 사유(NOT_CANCELABLE_*, 정산 완료, PROVIDER_ERROR)로 실패하면 조회 DONE →
-    //  취소 시도 → 실패가 매 회차 영원히 돈다. 하루가 지나면 일일 대사가 종결시키지만,
-    //  재처리 조회 대상에 24시간 하한이 없어 그때까지 30초마다 같은 취소를 반복한다.
-    //  대사와 관할이 겹치기도 하므로 findPendingDueForCheck에 하한을 넣어 끊는다.
+    // 그 외 사유(NOT_CANCELABLE_* 등)로 계속 실패해도 다음날 대사가 어제 생성분을 전부
+    // 종결하므로, 반복은 최대 하루로 잘린다.
     private fun netCancel(transaction: PaymentTransaction, tid: String) {
         val result = tossPaymentHandler.cancel(tid, "결제 확정 기한 초과")
         if (result is PaymentResult.Success) {
