@@ -25,8 +25,8 @@ class PaymentTransactionService(private val paymentTransactionRepository: Paymen
     fun findSuccessesApprovedBetween(from: Instant, to: Instant) =
         paymentTransactionRepository.findByStatusAndApprovedAtBetween(PaymentTransactionStatus.SUCCESS, from, to)
 
-    fun findPendingsCreatedBefore(before: Instant) =
-        paymentTransactionRepository.findByStatusAndCreatedAtBefore(PaymentTransactionStatus.PENDING, before)
+    fun findPendingsCreatedBetween(from: Instant, to: Instant) =
+        paymentTransactionRepository.findByStatusAndCreatedAtBetween(PaymentTransactionStatus.PENDING, from, to)
 
     @Transactional
     fun createPending(paymentKey: String, orderId: Long, moid: String, amount: Long): Long {

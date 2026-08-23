@@ -31,9 +31,10 @@ interface PaymentTransactionRepository {
         @Param("to") to: Instant,
     ): List<PaymentTransaction>
 
-    fun findByStatusAndCreatedAtBefore(
+    fun findByStatusAndCreatedAtBetween(
         @Param("status") status: PaymentTransactionStatus,
-        @Param("before") before: Instant,
+        @Param("from") from: Instant,
+        @Param("to") to: Instant,
     ): List<PaymentTransaction>
 
     fun mark(

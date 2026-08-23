@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import java.time.Instant
-import java.time.LocalDateTime
 import java.time.ZoneId
 
 // 일일 대사: 전일 거래를 PG와 전수 대조한다. 돈을 돌려주는 방향만 자동으로 처분(취소)하고,
@@ -29,8 +28,11 @@ class DailyReconciliationService(
     //  실패 건수를 세어 마지막에 잡을 실패시키면 재실행으로 만회할 수 있다(NOTES 3장 참고).
     @Scheduled(cron = "\${payment.reconciliation.daily-cron}", zone = Dates.ZONE_ID)
     fun reconcileYesterday() {
+        val zone = ZoneId.of(Dates.ZONE_ID)
         val windowEnd = Dates.today().atStartOfDay()
         val windowStart = windowEnd.minusDays(1)
+        val windowStartInstant = windowStart.atZone(zone).toInstant()
+        val windowEndInstant = windowEnd.atZone(zone).toInstant()
         // 한 결제가 승인·취소 두 거래로 올 수 있어 moid로 접는다. 취소가 하나라도 있으면 취소로 본다.
         val tossByMoid = tossPaymentHandler.transactions(windowStart, windowEnd)
             .groupBy { it.orderId }
@@ -44,8 +46,8 @@ class DailyReconciliationService(
                 log.error("Failed to reconcile payment: $moid", exception)
             }
         }
-        auditOurSuccesses(windowStart, windowEnd, tossByMoid.keys)
-        closeStuckPendings()
+        auditOurSuccesses(windowStartInstant, windowEndInstant, tossByMoid.keys)
+        closeStuckPendings(windowStartInstant, windowEndInstant)
     }
 
     private fun reconcile(moid: String, pg: PgTransaction) {
@@ -59,7 +61,6 @@ class DailyReconciliationService(
                 cancelLate(ours, pg)
             pg.isCanceled && ours.isSuccess ->
                 record(DiscrepancyType.CANCELED_BUT_SUCCESS, moid, ours, pg)
-            // 나머지는 정합이거나 관할 밖이다. PENDING은 24시간까지 재처리가, 그 뒤는 closeStuckPendings()가 맡는다.
         }
     }
 
@@ -76,12 +77,8 @@ class DailyReconciliationService(
 
     // PG 목록에 아예 없는 우리 성공 거래. 승인 시각 기준으로 잘라 PG 목록과 축을 맞췄지만,
     // PG의 거래 시각과 미세하게 어긋날 수 있어 개별 조회로 한 번 더 확인한다.
-    private fun auditOurSuccesses(windowStart: LocalDateTime, windowEnd: LocalDateTime, tossMoids: Set<String>) {
-        val zone = ZoneId.of(Dates.ZONE_ID)
-        val successes = paymentTransactionService.findSuccessesApprovedBetween(
-            windowStart.atZone(zone).toInstant(),
-            windowEnd.atZone(zone).toInstant(),
-        )
+    private fun auditOurSuccesses(windowStart: Instant, windowEnd: Instant, tossMoids: Set<String>) {
+        val successes = paymentTransactionService.findSuccessesApprovedBetween(windowStart, windowEnd)
         for (transaction in successes.filter { it.moid !in tossMoids }) {
             try {
                 when (val result = tossPaymentHandler.inquiry(transaction.moid)) {
@@ -97,9 +94,10 @@ class DailyReconciliationService(
         }
     }
 
-    // 취소가 계속 실패해 24시간 넘게 갇힌 PENDING을 종결한다. 재처리는 24시간까지만 본다.
-    private fun closeStuckPendings() {
-        for (transaction in paymentTransactionService.findPendingsCreatedBefore(Instant.now().minusSeconds(STUCK_AFTER_SECONDS))) {
+    // 어제 만들어졌는데 아직 안 끝난 거래를 종결한다. 재처리가 5분 룰로 끝냈어야 하는 것들이라
+    // 전부 기한을 한참 넘겼고, 이 단계가 끝나면 어제 거래는 종착 상태만 남는다.
+    private fun closeStuckPendings(windowStart: Instant, windowEnd: Instant) {
+        for (transaction in paymentTransactionService.findPendingsCreatedBetween(windowStart, windowEnd)) {
             try {
                 closeStuckPending(transaction)
             } catch (exception: Exception) {
@@ -145,7 +143,6 @@ class DailyReconciliationService(
     }
 
     companion object {
-        private const val STUCK_AFTER_SECONDS = 24 * 3600L
         private const val RECON_CANCEL_REASON = "대사에서 뒤늦게 확인된 결제 취소"
         private val log = LoggerFactory.getLogger(DailyReconciliationService::class.java)
     }
