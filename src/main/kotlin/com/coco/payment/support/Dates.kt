@@ -11,7 +11,7 @@ object Dates {
     // @Scheduled(zone = ...)처럼 컴파일 상수가 필요한 곳에서 쓴다.
     const val ZONE_ID = "Asia/Seoul"
 
-    private val SEOUL: ZoneId = ZoneId.of(ZONE_ID)
+    val SEOUL: ZoneId = ZoneId.of(ZONE_ID)
 
     fun now(): LocalDateTime = LocalDateTime.now(SEOUL)
 

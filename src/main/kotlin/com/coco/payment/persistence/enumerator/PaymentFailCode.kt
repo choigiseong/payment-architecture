@@ -6,6 +6,4 @@ enum class PaymentFailCode(val code: Int, val desc: String) {
     PG_CANCELED(2, "PG에서 취소된 결제"),
     NOT_CONFIRMED(3, "기한 안에 확인하지 못함"),
     NET_CANCEL(4, "기한 초과로 취소"),
-    RECON_CANCEL(5, "대사가 뒤늦게 취소"),
-    CANCEL_FAILED(6, "취소하지 못한 채 종결"),
 }
