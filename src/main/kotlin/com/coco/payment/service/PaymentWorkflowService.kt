@@ -2,6 +2,7 @@ package com.coco.payment.service
 
 import com.coco.payment.service.dto.BillingPaymentCommand
 import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingPaymentResult
+import com.coco.payment.persistence.enumerator.PaymentFailCode
 import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.persistence.repository.CompanyBillingKeyRepository
 import com.coco.payment.service.dto.PrepareBillingPaymentResult
@@ -9,6 +10,7 @@ import com.coco.payment.service.exception.DeliveryDateChangedException
 import com.coco.payment.service.exception.OrderAlreadyPaidException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
 
 @Service
 class PaymentWorkflowService(
@@ -80,27 +82,27 @@ class PaymentWorkflowService(
     //  어느 쪽이든 취소 API나 스키마 변경이 따르므로 스케줄러 설계와 같이 정한다.
     @Transactional
     fun complete(prepared: PrepareBillingPaymentResult.Ready, result: TossBillingPaymentResult) {
-        paymentTransactionService.complete(prepared.paymentTransactionId, result.tid)
+        paymentTransactionService.complete(prepared.paymentTransactionId, result.tid, result.approvedAt)
         orderService.markPaid(prepared.orderId)
     }
 
     // 실패는 "이번 시도"의 결과일 뿐 주문의 종료 상태가 아니다. 같은 orderKey로 재시도할 수 있으므로
     // 주문은 결제될 때까지 PENDING_PAYMENT로 두고, 시도별 결과는 payment_transaction에만 남긴다.
     @Transactional
-    fun fail(prepared: PrepareBillingPaymentResult.Ready, failCode: String?, failMessage: String?) {
+    fun fail(prepared: PrepareBillingPaymentResult.Ready, failCode: PaymentFailCode, failMessage: String?) {
         paymentTransactionService.fail(prepared.paymentTransactionId, failCode, failMessage)
     }
 
     @Transactional
-    fun completeByTransactionId(paymentTransactionId: Long, tid: String) {
+    fun completeByTransactionId(paymentTransactionId: Long, tid: String, approvedAt: Instant?) {
         val transaction = paymentTransactionService.findById(paymentTransactionId)
             ?: error("Payment transaction not found: $paymentTransactionId")
-        paymentTransactionService.complete(paymentTransactionId, tid)
+        paymentTransactionService.complete(paymentTransactionId, tid, approvedAt)
         orderService.markPaid(transaction.orderSeq)
     }
 
     @Transactional
-    fun failByTransactionId(paymentTransactionId: Long, failCode: String?, failMessage: String?) {
-        paymentTransactionService.fail(paymentTransactionId, failCode, failMessage)
+    fun failByTransactionId(paymentTransactionId: Long, failCode: PaymentFailCode, failMessage: String?, tid: String? = null) {
+        paymentTransactionService.fail(paymentTransactionId, failCode, failMessage, tid)
     }
 }

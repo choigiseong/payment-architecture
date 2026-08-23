@@ -1,8 +1,12 @@
 package com.coco.payment.persistence.converter
 
+import com.coco.payment.persistence.enumerator.DiscrepancyStatus
+import com.coco.payment.persistence.enumerator.DiscrepancyType
 import com.coco.payment.persistence.enumerator.OrderStatus
+import com.coco.payment.persistence.enumerator.PaymentFailCode
 import com.coco.payment.persistence.enumerator.PaymentSystem
 import com.coco.payment.persistence.enumerator.PaymentTransactionStatus
+import com.coco.payment.persistence.enumerator.PgPaymentStatus
 import org.apache.ibatis.type.BaseTypeHandler
 import org.apache.ibatis.type.JdbcType
 import org.apache.ibatis.type.MappedTypes
@@ -26,3 +30,15 @@ class OrderStatusTypeHandler : EnumCodeTypeHandler<OrderStatus>(OrderStatus.entr
 
 @MappedTypes(PaymentTransactionStatus::class)
 class PaymentTransactionStatusTypeHandler : EnumCodeTypeHandler<PaymentTransactionStatus>(PaymentTransactionStatus.entries.toTypedArray(), PaymentTransactionStatus::code)
+
+@MappedTypes(PaymentFailCode::class)
+class PaymentFailCodeTypeHandler : EnumCodeTypeHandler<PaymentFailCode>(PaymentFailCode.entries.toTypedArray(), PaymentFailCode::code)
+
+@MappedTypes(DiscrepancyType::class)
+class DiscrepancyTypeTypeHandler : EnumCodeTypeHandler<DiscrepancyType>(DiscrepancyType.entries.toTypedArray(), DiscrepancyType::code)
+
+@MappedTypes(DiscrepancyStatus::class)
+class DiscrepancyStatusTypeHandler : EnumCodeTypeHandler<DiscrepancyStatus>(DiscrepancyStatus.entries.toTypedArray(), DiscrepancyStatus::code)
+
+@MappedTypes(PgPaymentStatus::class)
+class PgPaymentStatusTypeHandler : EnumCodeTypeHandler<PgPaymentStatus>(PgPaymentStatus.entries.toTypedArray(), PgPaymentStatus::code)

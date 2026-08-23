@@ -9,6 +9,7 @@
         pt.tid AS tid,
         pt.amount AS amount,
         pt.status AS status,
+        pt.approved_at AS approvedAt,
         pt.fail_code AS failCode,
         pt.fail_message AS failMessage,
         pt.created_at AS createdAt,
@@ -48,10 +49,31 @@
         ORDER BY pt.created_at
     </select>
 
+    <select id="findByMoid" resultType="payment_transaction">
+        SELECT <include refid="paymentTransactionColumns" />
+        FROM payment_transaction AS pt
+        WHERE pt.moid = #{moid}
+    </select>
+
+    <select id="findByStatusAndApprovedAtBetween" resultType="payment_transaction">
+        SELECT <include refid="paymentTransactionColumns" />
+        FROM payment_transaction AS pt
+        WHERE pt.status = #{status}
+          AND pt.approved_at &gt;= #{from} AND pt.approved_at &lt; #{to}
+    </select>
+
+    <select id="findByStatusAndCreatedAtBetween" resultType="payment_transaction">
+        SELECT <include refid="paymentTransactionColumns" />
+        FROM payment_transaction AS pt
+        WHERE pt.status = #{status}
+          AND pt.created_at &gt;= #{from} AND pt.created_at &lt; #{to}
+    </select>
+
     <update id="mark">
         UPDATE payment_transaction
         SET tid = #{tid},
             status = #{toStatus},
+            approved_at = #{approvedAt},
             fail_code = #{failCode},
             fail_message = #{failMessage}
         WHERE id = #{id}

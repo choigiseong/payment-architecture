@@ -1,6 +1,7 @@
 package com.coco.payment.persistence.repository
 
 import com.coco.payment.persistence.model.PaymentTransaction
+import com.coco.payment.persistence.enumerator.PaymentFailCode
 import com.coco.payment.persistence.enumerator.PaymentTransactionStatus
 import org.apache.ibatis.annotations.Param
 import java.time.Instant
@@ -22,12 +23,27 @@ interface PaymentTransactionRepository {
         @Param("approveDoneBefore") approveDoneBefore: Instant,
     ): List<PaymentTransaction>
 
+    fun findByMoid(@Param("moid") moid: String): PaymentTransaction?
+
+    fun findByStatusAndApprovedAtBetween(
+        @Param("status") status: PaymentTransactionStatus,
+        @Param("from") from: Instant,
+        @Param("to") to: Instant,
+    ): List<PaymentTransaction>
+
+    fun findByStatusAndCreatedAtBetween(
+        @Param("status") status: PaymentTransactionStatus,
+        @Param("from") from: Instant,
+        @Param("to") to: Instant,
+    ): List<PaymentTransaction>
+
     fun mark(
         @Param("id") id: Long,
         @Param("fromStatus") fromStatus: PaymentTransactionStatus,
         @Param("toStatus") toStatus: PaymentTransactionStatus,
         @Param("tid") tid: String?,
-        @Param("failCode") failCode: String?,
+        @Param("approvedAt") approvedAt: Instant?,
+        @Param("failCode") failCode: PaymentFailCode?,
         @Param("failMessage") failMessage: String?,
     ): Int
 }
