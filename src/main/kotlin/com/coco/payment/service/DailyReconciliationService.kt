@@ -36,7 +36,7 @@ class DailyReconciliationService(
         // 한 결제가 승인·취소 두 거래로 올 수 있어 moid로 접는다. 취소가 하나라도 있으면 취소로 본다.
         val tossByMoid = tossPaymentHandler.transactions(windowStart, windowEnd)
             .groupBy { it.orderId }
-            .mapValues { (_, rows) -> rows.find { it.isCanceled } ?: rows.last() }
+            .mapValues { (_, rows) -> rows.find { it.isCanceled } ?: rows.find { it.isPaid } ?: rows.last() }
 
         for ((moid, pg) in tossByMoid) {
             // 건별로 격리한다. 하나가 실패해도 나머지가 이번 대사에서 빠지면 안 된다.
@@ -55,12 +55,19 @@ class DailyReconciliationService(
         when {
             ours == null ->
                 record(DiscrepancyType.ORPHAN, moid, null, pg)
+            // 아직 안 끝난 거래는 같은 실행의 closeStuckPendings()가 종결한다.
+            ours.isPending -> Unit
             pg.isPaid && ours.isSuccess ->
                 if (!ours.hasSameAmount(pg.amount)) record(DiscrepancyType.AMOUNT_MISMATCH, moid, ours, pg)
             pg.isPaid && ours.isFailed ->
                 cancelLate(ours, pg)
             pg.isCanceled && ours.isSuccess ->
                 record(DiscrepancyType.CANCELED_BUT_SUCCESS, moid, ours, pg)
+            // 정합 — 우리가 취소했거나 취소를 확인하고 종결한 거래.
+            pg.isCanceled && ours.isFailed -> Unit
+            // PG 상태가 판정 어휘 밖(UNKNOWN). 전수 대조에서 판정 불가는 성공이 아니라 불일치다.
+            else ->
+                record(DiscrepancyType.UNRESOLVED, moid, ours, pg)
         }
     }
 

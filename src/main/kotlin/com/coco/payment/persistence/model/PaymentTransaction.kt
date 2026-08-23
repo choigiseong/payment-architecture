@@ -24,6 +24,8 @@ data class PaymentTransaction(
 
     val isFailed: Boolean get() = status == PaymentTransactionStatus.FAILED
 
+    val isPending: Boolean get() = status == PaymentTransactionStatus.PENDING
+
     fun hasSameAmount(amount: Long) = this.amount == amount
 
     // 확정 기한을 넘겼는가. 넘기면 승인이 성공했더라도 되돌린다.
