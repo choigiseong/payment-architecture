@@ -13,6 +13,7 @@ import com.coco.payment.handler.paymentgateway.toss.dto.TossTransactionResponse
 import com.coco.payment.handler.paymentgateway.dto.PaymentResult
 import com.coco.payment.handler.paymentgateway.dto.PgTransaction
 import com.coco.payment.persistence.enumerator.PgPaymentStatus
+import com.coco.payment.support.Dates
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.MediaType
@@ -145,8 +146,8 @@ class TossPaymentHandler(
             val page = tossRestClient.get()
                 .uri { builder ->
                     builder.path("/v1/transactions")
-                        .queryParam("startDate", startDate)
-                        .queryParam("endDate", endDate)
+                        .queryParam("startDate", Dates.format(startDate))
+                        .queryParam("endDate", Dates.format(endDate))
                         .queryParam("limit", TRANSACTIONS_PAGE_LIMIT)
                         .apply { cursor?.let { queryParam("startingAfter", it) } }
                         .build()
