@@ -78,7 +78,7 @@ class DailyReconciliationService(
         if (result is PaymentResult.Success) {
             paymentTransactionService.overwriteFailure(ours.id!!, pg.tid, PaymentFailCode.RECON_CANCEL, "대사가 뒤늦게 확인된 결제를 취소했습니다.")
         } else {
-            record(DiscrepancyType.CANCEL_FAILED, ours.moid, ours, pg, detail = "취소 실패")
+            record(DiscrepancyType.CANCEL_FAILED, ours.moid, ours, pg, detail = result.errorOrNull?.reason)
         }
     }
 
@@ -118,10 +118,11 @@ class DailyReconciliationService(
             is PaymentResult.Success -> {
                 val cancel = tossPaymentHandler.cancel(result.value.tid, RECON_CANCEL_REASON)
                 if (cancel is PaymentResult.Success) {
-                    paymentTransactionService.fail(transaction.id!!, PaymentFailCode.RECON_CANCEL, "대사가 뒤늦게 확인된 결제를 취소했습니다.")
+                    paymentTransactionService.fail(transaction.id!!, PaymentFailCode.RECON_CANCEL, "대사가 뒤늦게 확인된 결제를 취소했습니다.", result.value.tid)
                 } else {
-                    paymentTransactionService.fail(transaction.id!!, PaymentFailCode.CANCEL_FAILED, "취소하지 못한 채 종결했습니다. 확인이 필요합니다.")
-                    record(DiscrepancyType.CANCEL_FAILED, transaction.moid, transaction, null, PgPaymentStatus.PAID, "취소 실패")
+                    // 박제(record)가 상태 변경(fail)보다 먼저 — 뒤에 넣으면 감지 시점 상태가 실제 행과 어긋난다.
+                    record(DiscrepancyType.CANCEL_FAILED, transaction.moid, transaction, null, PgPaymentStatus.PAID, cancel.errorOrNull?.reason)
+                    paymentTransactionService.fail(transaction.id!!, PaymentFailCode.CANCEL_FAILED, "취소하지 못한 채 종결했습니다. 확인이 필요합니다.", result.value.tid)
                 }
             }
             is PaymentResult.Failure ->

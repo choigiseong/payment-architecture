@@ -44,12 +44,12 @@ class PaymentTransactionService(private val paymentTransactionRepository: Paymen
 
     // 사유가 컬럼 길이를 넘겨 UPDATE가 실패하면 이미 청구된 결제를 FAILED로 확정하지 못하므로 잘라서 넣는다.
     @Transactional
-    fun fail(paymentTransactionId: Long, failCode: PaymentFailCode, failMessage: String?) {
+    fun fail(paymentTransactionId: Long, failCode: PaymentFailCode, failMessage: String?, tid: String? = null) {
         val marked = paymentTransactionRepository.mark(
             paymentTransactionId,
             PaymentTransactionStatus.PENDING,
             PaymentTransactionStatus.FAILED,
-            null,
+            tid,
             null,
             failCode,
             failMessage?.take(500),
