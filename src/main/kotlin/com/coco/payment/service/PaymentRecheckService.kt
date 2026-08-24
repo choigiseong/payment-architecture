@@ -60,7 +60,7 @@ class PaymentRecheckService(
             paymentWorkflowService.failByTransactionId(transaction.id!!, PaymentFailCode.NET_CANCEL, "확정 기한을 넘겨 결제를 취소했습니다.", tid)
             return
         }
-        log.error("Failed to cancel payment transaction: ${transaction.id}, tid: $tid")
+        log.error("Failed to cancel payment transaction: ${transaction.id}, tid: $tid, reason: ${result.errorOrNull?.reason}")
     }
 
     companion object {

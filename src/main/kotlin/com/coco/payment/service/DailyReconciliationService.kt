@@ -38,7 +38,7 @@ class DailyReconciliationService(
                 log.error("Failed to reconcile payment: $moid", exception)
             }
         }
-        recordFromOurSide(windowStart.atZone(Dates.SEOUL).toInstant(), windowEnd.atZone(Dates.SEOUL).toInstant(), tossByMoid.keys)
+        recordFromOurSide(Dates.seoulToInstant(windowStart), Dates.seoulToInstant(windowEnd), tossByMoid.keys)
     }
 
     private fun reconcile(moid: String, pg: PgTransaction) {
@@ -46,8 +46,10 @@ class DailyReconciliationService(
         when {
             ours == null ->
                 record(DiscrepancyType.ORPHAN, moid, null, pg)
-            // 아직 안 끝난 거래는 아래 훑기가 전량 적재한다. 끝낼지 말지는 대사가 정할 일이 아니다.
-            ours.isPending -> Unit
+            // PG가 이 결제를 안다. pg를 실어야 "돈이 잡혔나"가 행에 남고, 감지 시점 판정은
+            // 나중에 조회해도 복구되지 않는다. 끝낼지 말지는 대사가 정할 일이 아니다.
+            ours.isPending ->
+                record(DiscrepancyType.STUCK_PENDING, moid, ours, pg)
             pg.isPaid && ours.isSuccess ->
                 if (!ours.hasSameAmount(pg.amount)) record(DiscrepancyType.AMOUNT_MISMATCH, moid, ours, pg)
             // 되살리지도, 취소하지도 않는다. 사용자가 이미 재결제했을 수 있어 사람이 보고 정해야 한다.
@@ -65,10 +67,11 @@ class DailyReconciliationService(
 
     // 우리 쪽 목록을 훑는다. PG에 없는 성공은 개별 조회로 재확인하지 않는다 — 우리 approved_at도
     // PG가 준 값이라 두 목록의 축이 같고, 어긋난다면 그게 곧 사람이 봐야 할 불일치다.
-    // 미결은 승인 시각이 없어 생성 시각으로 자르고, PG에 있든 없든 끝나지 않은 것은 다 올린다.
+    // 미결은 승인 시각이 없어 생성 시각으로 자른다. PG 목록에 있는 미결은 reconcile()이 pg와
+    // 함께 적재하므로 여기서는 목록에 없는 것만 본다 — 빈 pg_status가 곧 "승인 미도달"이다.
     private fun recordFromOurSide(windowStart: Instant, windowEnd: Instant, tossMoids: Set<String>) {
         for (transaction in paymentTransactionService.findPendingsCreatedBetween(windowStart, windowEnd)) {
-            record(DiscrepancyType.STUCK_PENDING, transaction.moid, transaction, null)
+            if (transaction.moid !in tossMoids) record(DiscrepancyType.STUCK_PENDING, transaction.moid, transaction, null)
         }
         for (transaction in paymentTransactionService.findSuccessesApprovedBetween(windowStart, windowEnd)) {
             if (transaction.moid !in tossMoids) record(DiscrepancyType.MISSING_AT_PG, transaction.moid, transaction, null)

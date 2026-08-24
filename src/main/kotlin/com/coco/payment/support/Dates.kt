@@ -1,5 +1,6 @@
 package com.coco.payment.support
 
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -11,11 +12,15 @@ object Dates {
     // @Scheduled(zone = ...)처럼 컴파일 상수가 필요한 곳에서 쓴다.
     const val ZONE_ID = "Asia/Seoul"
 
-    val SEOUL: ZoneId = ZoneId.of(ZONE_ID)
+    private val SEOUL: ZoneId = ZoneId.of(ZONE_ID)
 
     fun now(): LocalDateTime = LocalDateTime.now(SEOUL)
 
     fun today(): LocalDate = LocalDate.now(SEOUL)
+
+    // 서울 벽시계 값을 시점으로 바꾼다. now()·today()는 서울 값을 만들어 주지만 이쪽은 입력이
+    // 서울이라고 가정하는 쪽이라 이름에 시간대를 드러낸다. 규칙이 호출부로 흩어지지 않게 SEOUL은 감춘다.
+    fun seoulToInstant(dateTime: LocalDateTime): Instant = dateTime.atZone(SEOUL).toInstant()
 
     // LocalDateTime.toString()은 초가 0이면 초를 생략해 포맷이 흔들린다. 외부로 보내는 로컬 시각은 이 형식으로 고정한다.
     fun format(dateTime: LocalDateTime): String = dateTime.format(LOCAL_DATE_TIME_FORMAT)
