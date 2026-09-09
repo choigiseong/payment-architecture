@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.coco.payment.persistence.repository.PaymentCancelRepository">
+    <sql id="paymentCancelColumns">
+        pc.id AS id,
+        pc.payment_transaction_seq AS paymentTransactionSeq,
+        pc.reason AS reason,
+        pc.status AS status,
+        pc.transaction_key AS transactionKey,
+        pc.last_error AS lastError,
+        pc.canceled_at AS canceledAt,
+        pc.created_at AS createdAt,
+        pc.updated_at AS updatedAt
+    </sql>
+
+    <insert id="insert" parameterType="com.coco.payment.persistence.model.PaymentCancel"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO payment_cancel (payment_transaction_seq, reason, status)
+        VALUES (#{paymentTransactionSeq}, #{reason}, #{status})
+    </insert>
+
+    <select id="findByStatus" resultType="payment_cancel">
+        SELECT <include refid="paymentCancelColumns" />
+        FROM payment_cancel AS pc
+        WHERE pc.status = #{status}
+        <!-- 최신부터 본다. 재처리 조회와 같은 이유다 — 갇힌 취소가 선두를 점유해
+             방금 결정된 취소(사용자가 환불을 기다린다)를 밀어내지 않게 한다. -->
+        ORDER BY pc.created_at DESC
+    </select>
+
+    <select id="findByTransactionSeqAndStatus" resultType="payment_cancel">
+        SELECT <include refid="paymentCancelColumns" />
+        FROM payment_cancel AS pc
+        WHERE pc.payment_transaction_seq = #{paymentTransactionSeq}
+          AND pc.status = #{status}
+    </select>
+
+    <update id="markDone">
+        UPDATE payment_cancel
+        SET status = #{toStatus},
+            transaction_key = #{transactionKey},
+            canceled_at = #{canceledAt}
+        WHERE id = #{id}
+          AND status = #{fromStatus}
+    </update>
+
+    <update id="updateLastError">
+        UPDATE payment_cancel
+        SET last_error = #{lastError}
+        WHERE id = #{id}
+    </update>
+</mapper>
