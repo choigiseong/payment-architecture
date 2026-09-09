@@ -17,6 +17,14 @@ class PaymentCancelService(private val paymentCancelRepository: PaymentCancelRep
 
     fun findRequested() = paymentCancelRepository.findByStatus(CancelStatus.REQUESTED)
 
+    fun findByTransactionKey(transactionKey: String) = paymentCancelRepository.findByTransactionKey(transactionKey)
+
+    fun findRequestedCreatedBetween(from: Instant, to: Instant) =
+        paymentCancelRepository.findByStatusAndCreatedAtBetween(CancelStatus.REQUESTED, from, to)
+
+    fun findDoneCanceledBetween(from: Instant, to: Instant) =
+        paymentCancelRepository.findByStatusAndCanceledAtBetween(CancelStatus.DONE, from, to)
+
     @Transactional
     fun complete(paymentCancelId: Long, transactionKey: String, canceledAt: Instant?) {
         val marked = paymentCancelRepository.markDone(paymentCancelId, CancelStatus.REQUESTED, CancelStatus.DONE, transactionKey, canceledAt)

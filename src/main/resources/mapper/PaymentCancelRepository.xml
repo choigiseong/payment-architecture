@@ -33,6 +33,26 @@
           AND pc.status = #{status}
     </select>
 
+
+    <select id="findByTransactionKey" resultType="payment_cancel">
+        SELECT <include refid="paymentCancelColumns" />
+        FROM payment_cancel AS pc
+        WHERE pc.transaction_key = #{transactionKey}
+    </select>
+
+    <select id="findByStatusAndCreatedAtBetween" resultType="payment_cancel">
+        SELECT <include refid="paymentCancelColumns" />
+        FROM payment_cancel AS pc
+        WHERE pc.status = #{status}
+          AND pc.created_at &gt;= #{from} AND pc.created_at &lt; #{to}
+    </select>
+
+    <select id="findByStatusAndCanceledAtBetween" resultType="payment_cancel">
+        SELECT <include refid="paymentCancelColumns" />
+        FROM payment_cancel AS pc
+        WHERE pc.status = #{status}
+          AND pc.canceled_at &gt;= #{from} AND pc.canceled_at &lt; #{to}
+    </select>
     <update id="markDone">
         UPDATE payment_cancel
         SET status = #{toStatus},

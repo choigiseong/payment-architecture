@@ -24,4 +24,18 @@ interface PaymentCancelRepository {
     ): Int
 
     fun updateLastError(@Param("id") id: Long, @Param("lastError") lastError: String?): Int
+
+    fun findByTransactionKey(@Param("transactionKey") transactionKey: String): PaymentCancel?
+
+    fun findByStatusAndCreatedAtBetween(
+        @Param("status") status: CancelStatus,
+        @Param("from") from: Instant,
+        @Param("to") to: Instant,
+    ): List<PaymentCancel>
+
+    fun findByStatusAndCanceledAtBetween(
+        @Param("status") status: CancelStatus,
+        @Param("from") from: Instant,
+        @Param("to") to: Instant,
+    ): List<PaymentCancel>
 }

@@ -167,7 +167,7 @@ class TossPaymentHandler(
                 }
                 .body(Array<TossTransactionResponse>::class.java)
                 ?: throw TossPaymentException(null, "Toss transactions response is empty")
-            all += page.map { PgTransaction(it.paymentKey, it.orderId, toPgPaymentStatus(it.status), it.status, it.amount) }
+            all += page.map { PgTransaction(it.paymentKey, it.transactionKey, it.orderId, toPgPaymentStatus(it.status), it.status, it.amount) }
             cursor = page.lastOrNull()?.transactionKey
         } while (page.size == TRANSACTIONS_PAGE_LIMIT)
         return all
