@@ -56,4 +56,18 @@ class PaymentTransactionService(private val paymentTransactionRepository: Paymen
         )
         check(marked == 1) { "Failed to mark payment transaction as failed" }
     }
+
+    @Transactional
+    fun cancel(paymentTransactionId: Long, tid: String, approvedAt: Instant?, failCode: PaymentFailCode, failMessage: String) {
+        val marked = paymentTransactionRepository.mark(
+            paymentTransactionId,
+            PaymentTransactionStatus.PENDING,
+            PaymentTransactionStatus.CANCELED,
+            tid,
+            approvedAt,
+            failCode,
+            failMessage.take(500),
+        )
+        check(marked == 1) { "Failed to mark payment transaction as canceled" }
+    }
 }

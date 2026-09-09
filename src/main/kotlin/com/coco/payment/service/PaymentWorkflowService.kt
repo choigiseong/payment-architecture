@@ -17,6 +17,7 @@ class PaymentWorkflowService(
     private val orderService: OrderService,
     private val paymentTransactionService: PaymentTransactionService,
     private val companyBillingKeyRepository: CompanyBillingKeyRepository,
+    private val paymentCancelService: PaymentCancelService,
 ) {
     fun findByPaymentKey(paymentKey: String) = paymentTransactionService.findByPaymentKey(paymentKey)
 
@@ -104,5 +105,11 @@ class PaymentWorkflowService(
     @Transactional
     fun failByTransactionId(paymentTransactionId: Long, failCode: PaymentFailCode, failMessage: String?, tid: String? = null) {
         paymentTransactionService.fail(paymentTransactionId, failCode, failMessage, tid)
+    }
+
+    @Transactional
+    fun cancelByTransactionId(paymentTransactionId: Long, tid: String, approvedAt: Instant?, failCode: PaymentFailCode, failMessage: String, cancelReason: String) {
+        paymentTransactionService.cancel(paymentTransactionId, tid, approvedAt, failCode, failMessage)
+        paymentCancelService.request(paymentTransactionId, cancelReason)
     }
 }
