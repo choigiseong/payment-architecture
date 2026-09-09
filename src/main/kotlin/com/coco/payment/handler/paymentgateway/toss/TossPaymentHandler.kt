@@ -7,10 +7,12 @@ import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingPaymentReques
 import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingPaymentResponse
 import com.coco.payment.handler.paymentgateway.toss.dto.TossBillingPaymentResult
 import com.coco.payment.handler.paymentgateway.toss.dto.TossPaymentCancelRequest
+import com.coco.payment.handler.paymentgateway.toss.dto.TossPaymentCancelResponse
 import com.coco.payment.handler.paymentgateway.toss.dto.TossPaymentException
 import com.coco.payment.handler.paymentgateway.toss.dto.TossPaymentInquiryResponse
 import com.coco.payment.handler.paymentgateway.toss.dto.TossTransactionResponse
 import com.coco.payment.handler.paymentgateway.dto.PaymentResult
+import com.coco.payment.handler.paymentgateway.dto.PgCancelResult
 import com.coco.payment.handler.paymentgateway.dto.PgTransaction
 import com.coco.payment.persistence.enumerator.PgPaymentStatus
 import com.coco.payment.support.Dates
@@ -117,20 +119,26 @@ class TossPaymentHandler(
 
     // 취소 대상 키는 승인 응답에만 들어 있으므로, 응답을 잃은 거래는 조회로 tid를 먼저 알아내야 한다.
     // 실패를 예외가 아니라 결과로 돌려 호출부가 다음 회차 재시도를 선택할 수 있게 한다.
-    fun cancel(tid: String, cancelReason: String): PaymentResult<Unit> {
+    fun cancel(tid: String, cancelReason: String, idempotencyKey: String): PaymentResult<PgCancelResult> {
         return try {
-            tossRestClient.post()
+            val response = tossRestClient.post()
                 .uri("/v1/payments/{paymentKey}/cancel", tid)
-                .headers { headers -> headers.setBasicAuth(secretKey, "") }
+                .headers { headers ->
+                    headers.setBasicAuth(secretKey, "")
+                    headers.set("Idempotency-Key", idempotencyKey)
+                }
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(TossPaymentCancelRequest(cancelReason))
                 .retrieve()
                 .onStatus({ status -> status.isError }) { _, clientResponse ->
                     throw TossPaymentException.from(objectMapper, clientResponse, "Toss payment cancel failed")
                 }
-                .toBodilessEntity()
+                .body(TossPaymentCancelResponse::class.java)
+                ?: throw TossPaymentException(null, "Toss payment cancel response is empty")
+            val cancel = response.cancels?.lastOrNull()
+                ?: throw TossPaymentException(null, "Toss payment cancel response has no cancels")
 
-            PaymentResult.Success(Unit)
+            PaymentResult.Success(PgCancelResult(cancel.transactionKey, cancel.canceledAt?.toInstant()))
         } catch (exception: TossPaymentException) {
             PaymentResult.Failure(PaymentResult.PaymentError(exception.code, exception.message ?: "Toss payment cancel failed"))
         } catch (exception: RestClientException) {
