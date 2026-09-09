@@ -23,8 +23,6 @@
         SELECT <include refid="paymentCancelColumns" />
         FROM payment_cancel AS pc
         WHERE pc.status = #{status}
-        <!-- 최신부터 본다. 재처리 조회와 같은 이유다 — 갇힌 취소가 선두를 점유해
-             방금 결정된 취소(사용자가 환불을 기다린다)를 밀어내지 않게 한다. -->
         ORDER BY pc.created_at DESC
     </select>
 
