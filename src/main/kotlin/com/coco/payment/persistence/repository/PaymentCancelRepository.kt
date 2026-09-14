@@ -10,11 +10,6 @@ interface PaymentCancelRepository {
 
     fun findByStatus(@Param("status") status: CancelStatus): List<PaymentCancel>
 
-    fun findByTransactionSeqAndStatus(
-        @Param("paymentTransactionSeq") paymentTransactionSeq: Long,
-        @Param("status") status: CancelStatus,
-    ): PaymentCancel?
-
     fun markDone(
         @Param("id") id: Long,
         @Param("fromStatus") fromStatus: CancelStatus,
