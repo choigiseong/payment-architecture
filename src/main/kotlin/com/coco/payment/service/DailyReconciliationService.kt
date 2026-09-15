@@ -73,6 +73,7 @@ class DailyReconciliationService(
         if (paymentCancelService.findByTransactionKey(pg.transactionKey) != null) return
 
         val ours = paymentTransactionService.findByMoid(pg.orderId)
+        // 키를 아직 못 받은 우리 취소다(응답 유실). 아래 recordFromOurSide가 STUCK_CANCEL로 적재한다.
         if (ours != null && paymentCancelService.findRequestedByTransactionSeq(ours.id!!) != null) return
 
         record(DiscrepancyType.UNKNOWN_CANCEL, pg.orderId, ours, pg)
