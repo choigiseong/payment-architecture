@@ -14,4 +14,6 @@ data class PgTransaction(
     val isPaid: Boolean get() = status == PgPaymentStatus.PAID
 
     val isCanceled: Boolean get() = status == PgPaymentStatus.CANCELED
+
+    val isNotCompleted: Boolean get() = status == PgPaymentStatus.NOT_COMPLETED
 }

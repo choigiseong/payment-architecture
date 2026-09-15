@@ -138,7 +138,7 @@ class TossPaymentHandler(
             val cancel = response.cancels?.lastOrNull()
                 ?: throw TossPaymentException(null, "Toss payment cancel response has no cancels")
 
-            PaymentResult.Success(PgCancelResult(cancel.transactionKey, cancel.canceledAt?.toInstant()))
+            PaymentResult.Success(PgCancelResult(cancel.transactionKey, cancel.canceledAt.toInstant()))
         } catch (exception: TossPaymentException) {
             PaymentResult.Failure(PaymentResult.PaymentError(exception.code, exception.message ?: "Toss payment cancel failed"))
         } catch (exception: RestClientException) {
@@ -176,7 +176,8 @@ class TossPaymentHandler(
     // inquiry()의 상태 분기와 같은 판정이다. Toss 어휘를 아는 곳은 이 핸들러뿐이어야 한다.
     private fun toPgPaymentStatus(status: String): PgPaymentStatus = when (status) {
         "DONE" -> PgPaymentStatus.PAID
-        "CANCELED", "PARTIAL_CANCELED", "ABORTED", "EXPIRED" -> PgPaymentStatus.CANCELED
+        "CANCELED", "PARTIAL_CANCELED" -> PgPaymentStatus.CANCELED
+        "ABORTED", "EXPIRED" -> PgPaymentStatus.NOT_COMPLETED
         else -> PgPaymentStatus.UNKNOWN
     }
 

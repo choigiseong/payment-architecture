@@ -10,4 +10,5 @@ enum class DiscrepancyType(val code: Int, val desc: String) {
     UNKNOWN_CANCEL(9, "우리가 모르는 취소"),
     STUCK_CANCEL(10, "종결되지 않은 취소"),
     CANCEL_MISSING_AT_PG(11, "취소했다는데 PG에 없음"),
+    NOT_COMPLETED_BUT_SUCCESS(12, "우리는 성공인데 PG는 결제로 끝나지 않음"),
 }

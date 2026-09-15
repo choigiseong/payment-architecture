@@ -19,6 +19,9 @@ class PaymentCancelService(private val paymentCancelRepository: PaymentCancelRep
 
     fun findByTransactionKey(transactionKey: String) = paymentCancelRepository.findByTransactionKey(transactionKey)
 
+    fun findRequestedByTransactionSeq(paymentTransactionSeq: Long) =
+        paymentCancelRepository.findByTransactionSeqAndStatus(paymentTransactionSeq, CancelStatus.REQUESTED)
+
     fun findRequestedCreatedBetween(from: Instant, to: Instant) =
         paymentCancelRepository.findByStatusAndCreatedAtBetween(CancelStatus.REQUESTED, from, to)
 
@@ -26,7 +29,7 @@ class PaymentCancelService(private val paymentCancelRepository: PaymentCancelRep
         paymentCancelRepository.findByStatusAndCanceledAtBetween(CancelStatus.DONE, from, to)
 
     @Transactional
-    fun complete(paymentCancelId: Long, transactionKey: String, canceledAt: Instant?) {
+    fun complete(paymentCancelId: Long, transactionKey: String, canceledAt: Instant) {
         val marked = paymentCancelRepository.markDone(paymentCancelId, CancelStatus.REQUESTED, CancelStatus.DONE, transactionKey, canceledAt)
         check(marked == 1) { "Failed to mark payment cancel as done" }
     }

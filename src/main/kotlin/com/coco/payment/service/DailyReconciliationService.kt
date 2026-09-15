@@ -45,6 +45,7 @@ class DailyReconciliationService(
         when {
             pg.isPaid -> reconcilePayment(pg)
             pg.isCanceled -> reconcileCancel(pg)
+            pg.isNotCompleted -> reconcileNotCompleted(pg)
             // PG 상태가 판정 어휘 밖(UNKNOWN). 전수 대조에서 판정 불가는 성공이 아니라 불일치다.
             else -> record(DiscrepancyType.UNRESOLVED, pg.orderId, paymentTransactionService.findByMoid(pg.orderId), pg)
         }
@@ -69,8 +70,26 @@ class DailyReconciliationService(
     }
 
     private fun reconcileCancel(pg: PgTransaction) {
-        if (paymentCancelService.findByTransactionKey(pg.transactionKey) == null) {
-            record(DiscrepancyType.UNKNOWN_CANCEL, pg.orderId, paymentTransactionService.findByMoid(pg.orderId), pg)
+        if (paymentCancelService.findByTransactionKey(pg.transactionKey) != null) return
+
+        val ours = paymentTransactionService.findByMoid(pg.orderId)
+        if (ours != null && paymentCancelService.findRequestedByTransactionSeq(ours.id!!) != null) return
+
+        record(DiscrepancyType.UNKNOWN_CANCEL, pg.orderId, ours, pg)
+    }
+
+    private fun reconcileNotCompleted(pg: PgTransaction) {
+        val ours = paymentTransactionService.findByMoid(pg.orderId)
+        when {
+            ours == null ->
+                record(DiscrepancyType.ORPHAN, pg.orderId, null, pg)
+            ours.isPending ->
+                record(DiscrepancyType.STUCK_PENDING, pg.orderId, ours, pg)
+            ours.isSuccess ->
+                record(DiscrepancyType.NOT_COMPLETED_BUT_SUCCESS, pg.orderId, ours, pg)
+            ours.isFailed -> Unit
+            else ->
+                record(DiscrepancyType.UNRESOLVED, pg.orderId, ours, pg)
         }
     }
 
@@ -89,7 +108,7 @@ class DailyReconciliationService(
             recordCancel(DiscrepancyType.STUCK_CANCEL, cancel, cancel.lastError)
         }
         for (cancel in paymentCancelService.findDoneCanceledBetween(windowStart, windowEnd)) {
-            if (cancel.transactionKey == null || cancel.transactionKey !in pgCancelKeys) {
+            if (cancel.transactionKey !in pgCancelKeys) {
                 recordCancel(DiscrepancyType.CANCEL_MISSING_AT_PG, cancel, cancel.transactionKey)
             }
         }

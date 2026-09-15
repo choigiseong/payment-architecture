@@ -10,12 +10,17 @@ interface PaymentCancelRepository {
 
     fun findByStatus(@Param("status") status: CancelStatus): List<PaymentCancel>
 
+    fun findByTransactionSeqAndStatus(
+        @Param("paymentTransactionSeq") paymentTransactionSeq: Long,
+        @Param("status") status: CancelStatus,
+    ): PaymentCancel?
+
     fun markDone(
         @Param("id") id: Long,
         @Param("fromStatus") fromStatus: CancelStatus,
         @Param("toStatus") toStatus: CancelStatus,
         @Param("transactionKey") transactionKey: String,
-        @Param("canceledAt") canceledAt: Instant?,
+        @Param("canceledAt") canceledAt: Instant,
     ): Int
 
     fun updateLastError(@Param("id") id: Long, @Param("lastError") lastError: String?): Int

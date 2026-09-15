@@ -26,6 +26,13 @@
         ORDER BY pc.created_at DESC
     </select>
 
+    <select id="findByTransactionSeqAndStatus" resultType="payment_cancel">
+        SELECT <include refid="paymentCancelColumns" />
+        FROM payment_cancel AS pc
+        WHERE pc.payment_transaction_seq = #{paymentTransactionSeq}
+          AND pc.status = #{status}
+    </select>
+
     <select id="findByTransactionKey" resultType="payment_cancel">
         SELECT <include refid="paymentCancelColumns" />
         FROM payment_cancel AS pc

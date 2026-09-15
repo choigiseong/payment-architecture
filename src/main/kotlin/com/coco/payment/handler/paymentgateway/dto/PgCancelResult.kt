@@ -4,5 +4,5 @@ import java.time.Instant
 
 data class PgCancelResult(
     val transactionKey: String,
-    val canceledAt: Instant?,
+    val canceledAt: Instant,
 )
