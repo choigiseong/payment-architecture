@@ -59,6 +59,10 @@ data class TossTransactionResponse(
 
 data class TossPaymentCancelRequest(val cancelReason: String)
 
+data class TossPaymentCancelResponse(val cancels: List<TossPaymentCancelEntry>?)
+
+data class TossPaymentCancelEntry(val transactionKey: String, val canceledAt: OffsetDateTime)
+
 class TossPaymentException(
     val code: String?,
     message: String,

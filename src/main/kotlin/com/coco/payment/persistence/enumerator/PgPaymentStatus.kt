@@ -5,4 +5,5 @@ enum class PgPaymentStatus(val code: Int, val desc: String) {
     UNKNOWN(0, "판정 불가"),
     PAID(1, "결제 완료"),
     CANCELED(2, "취소됨"),
+    NOT_COMPLETED(3, "결제로 끝나지 않음"),
 }

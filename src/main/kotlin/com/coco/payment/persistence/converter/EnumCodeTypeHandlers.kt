@@ -1,5 +1,6 @@
 package com.coco.payment.persistence.converter
 
+import com.coco.payment.persistence.enumerator.CancelStatus
 import com.coco.payment.persistence.enumerator.DiscrepancyStatus
 import com.coco.payment.persistence.enumerator.DiscrepancyType
 import com.coco.payment.persistence.enumerator.OrderStatus
@@ -39,6 +40,9 @@ class DiscrepancyTypeTypeHandler : EnumCodeTypeHandler<DiscrepancyType>(Discrepa
 
 @MappedTypes(DiscrepancyStatus::class)
 class DiscrepancyStatusTypeHandler : EnumCodeTypeHandler<DiscrepancyStatus>(DiscrepancyStatus.entries.toTypedArray(), DiscrepancyStatus::code)
+
+@MappedTypes(CancelStatus::class)
+class CancelStatusTypeHandler : EnumCodeTypeHandler<CancelStatus>(CancelStatus.entries.toTypedArray(), CancelStatus::code)
 
 @MappedTypes(PgPaymentStatus::class)
 class PgPaymentStatusTypeHandler : EnumCodeTypeHandler<PgPaymentStatus>(PgPaymentStatus.entries.toTypedArray(), PgPaymentStatus::code)

@@ -28,14 +28,17 @@ class PaymentRecheckService(
         }
     }
 
-    // 거래는 생성 후 정해진 기한 안에 성공이나 실패로 끝나야 한다. 기한을 넘기면 배송 마감을
+    // 거래는 생성 후 정해진 기한 안에 끝나야 한다. 기한을 넘기면 배송 마감을
     // 지킬 수 없으므로, 승인이 성공했더라도 되돌려 없던 일로 만든다.
     private fun recheck(transaction: PaymentTransaction, now: Instant) {
         val expired = transaction.isExpired(now)
         when (val result = tossPaymentHandler.inquiry(transaction.moid)) {
             is PaymentResult.Success ->
                 if (expired) {
-                    netCancel(transaction, result.value.tid)
+                    paymentWorkflowService.cancelByTransactionId(
+                        transaction.id!!, result.value.tid, result.value.approvedAt,
+                        PaymentFailCode.NET_CANCEL, "확정 기한을 넘겨 결제를 취소했습니다.", "결제 확정 기한 초과",
+                    )
                 } else {
                     paymentWorkflowService.completeByTransactionId(transaction.id!!, result.value.tid, result.value.approvedAt)
                 }
@@ -49,18 +52,6 @@ class PaymentRecheckService(
                     paymentWorkflowService.failByTransactionId(transaction.id!!, PaymentFailCode.NOT_CONFIRMED, "기한 안에 결제를 확인하지 못했습니다.")
                 }
         }
-    }
-
-    // 취소 실패는 PENDING으로 남겨 다음 회차가 다시 시도하게 한다. 이미 취소된 결제라면 조회가
-    // CANCELED를 돌려줘 Failure 가지로 끝나므로 여기 오지 않는다. 그 외 사유(NOT_CANCELABLE_* 등)로
-    // 계속 실패하면 미결로 남는다 — 끊는 기준은 두지 않았고, 대사도 개입하지 않는다.
-    private fun netCancel(transaction: PaymentTransaction, tid: String) {
-        val result = tossPaymentHandler.cancel(tid, "결제 확정 기한 초과")
-        if (result is PaymentResult.Success) {
-            paymentWorkflowService.failByTransactionId(transaction.id!!, PaymentFailCode.NET_CANCEL, "확정 기한을 넘겨 결제를 취소했습니다.", tid)
-            return
-        }
-        log.error("Failed to cancel payment transaction: ${transaction.id}, tid: $tid, reason: ${result.errorOrNull?.reason}")
     }
 
     companion object {

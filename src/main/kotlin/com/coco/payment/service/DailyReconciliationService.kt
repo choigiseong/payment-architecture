@@ -4,6 +4,7 @@ import com.coco.payment.handler.paymentgateway.toss.TossPaymentHandler
 import com.coco.payment.handler.paymentgateway.dto.PgTransaction
 import com.coco.payment.persistence.enumerator.DiscrepancyType
 import com.coco.payment.persistence.enumerator.PaymentSystem
+import com.coco.payment.persistence.model.PaymentCancel
 import com.coco.payment.persistence.model.PaymentTransaction
 import com.coco.payment.support.Dates
 import org.slf4j.LoggerFactory
@@ -13,76 +14,118 @@ import java.time.Instant
 
 // 일일 대사: 전일 거래를 PG와 전수 대조하고, 어긋난 것을 불일치로 적재해 사람에게 넘긴다.
 // 적재까지가 이 잡의 일이다 — PG를 쓰기로 건드리지 않고, 거래 상태도 바꾸지 않는다.
+// 축이 둘이다. 승인 거래는 payment_transaction과, 취소 거래는 payment_cancel과 대조한다.
 @Service
 class DailyReconciliationService(
     private val paymentTransactionService: PaymentTransactionService,
+    private val paymentCancelService: PaymentCancelService,
     private val tossPaymentHandler: TossPaymentHandler,
     private val reconciliationDiscrepancyService: ReconciliationDiscrepancyService,
 ) {
-    // TODO: reconcile()이 건별로 예외를 삼키고 로그만 남긴다. 재처리는 다음 회차가 다시 집으니
+    // TODO: reconcile이 건별로 예외를 삼키고 로그만 남긴다. 재처리는 다음 회차가 다시 집으니
     //  안전했지만, 대사는 창이 1일이고 결석 만회가 없어 빠진 거래가 영영 대사를 못 받는다.
-    //  실패 건수를 세어 마지막에 잡을 실패시키면 재실행으로 만회할 수 있다(NOTES 3장 참고).
+    //  실패 건수를 세어 마지막에 잡을 실패시키면 재실행으로 만회할 수 있다(NOTES 참고).
     @Scheduled(cron = "\${payment.reconciliation.daily-cron}", zone = Dates.ZONE_ID)
     fun reconcileYesterday() {
         val windowEnd = Dates.today().atStartOfDay()
         val windowStart = windowEnd.minusDays(1)
-        // 한 결제가 승인·취소 두 거래로 올 수 있어 moid로 접는다. 취소가 하나라도 있으면 취소로 본다.
-        val tossByMoid = tossPaymentHandler.transactions(windowStart, windowEnd)
-            .groupBy { it.orderId }
-            .mapValues { (_, rows) -> rows.find { it.isCanceled } ?: rows.find { it.isPaid } ?: rows.last() }
+        val pgRows = tossPaymentHandler.transactions(windowStart, windowEnd)
 
-        for ((moid, pg) in tossByMoid) {
+        for (pg in pgRows) {
             try {
-                reconcile(moid, pg)
+                reconcile(pg)
             } catch (exception: Exception) {
-                log.error("Failed to reconcile payment: $moid", exception)
+                log.error("Failed to reconcile pg transaction: ${pg.transactionKey}", exception)
             }
         }
-        recordFromOurSide(Dates.seoulToInstant(windowStart), Dates.seoulToInstant(windowEnd), tossByMoid.keys)
+        recordFromOurSide(Dates.seoulToInstant(windowStart), Dates.seoulToInstant(windowEnd), pgRows)
     }
 
-    private fun reconcile(moid: String, pg: PgTransaction) {
-        val ours = paymentTransactionService.findByMoid(moid)
+    private fun reconcile(pg: PgTransaction) {
+        when {
+            pg.isPaid -> reconcilePayment(pg)
+            pg.isCanceled -> reconcileCancel(pg)
+            pg.isNotCompleted -> reconcileNotCompleted(pg)
+            // PG 상태가 판정 어휘 밖(UNKNOWN). 전수 대조에서 판정 불가는 성공이 아니라 불일치다.
+            else -> record(DiscrepancyType.UNRESOLVED, pg.orderId, paymentTransactionService.findByMoid(pg.orderId), pg)
+        }
+    }
+
+    private fun reconcilePayment(pg: PgTransaction) {
+        val ours = paymentTransactionService.findByMoid(pg.orderId)
         when {
             ours == null ->
-                record(DiscrepancyType.ORPHAN, moid, null, pg)
-            // PG가 이 결제를 안다. pg를 실어야 "돈이 잡혔나"가 행에 남고, 감지 시점 판정은
-            // 나중에 조회해도 복구되지 않는다. 끝낼지 말지는 대사가 정할 일이 아니다.
+                record(DiscrepancyType.ORPHAN, pg.orderId, null, pg)
             ours.isPending ->
-                record(DiscrepancyType.STUCK_PENDING, moid, ours, pg)
-            pg.isPaid && ours.isSuccess ->
-                if (!ours.hasSameAmount(pg.amount)) record(DiscrepancyType.AMOUNT_MISMATCH, moid, ours, pg)
-            // 되살리지도, 취소하지도 않는다. 사용자가 이미 재결제했을 수 있어 사람이 보고 정해야 한다.
-            pg.isPaid && ours.isFailed ->
-                record(DiscrepancyType.PAID_BUT_FAILED, moid, ours, pg)
-            pg.isCanceled && ours.isSuccess ->
-                record(DiscrepancyType.CANCELED_BUT_SUCCESS, moid, ours, pg)
-            // 정합 — 우리가 취소했거나 취소를 확인하고 종결한 거래.
-            pg.isCanceled && ours.isFailed -> Unit
-            // PG 상태가 판정 어휘 밖(UNKNOWN). 전수 대조에서 판정 불가는 성공이 아니라 불일치다.
+                record(DiscrepancyType.STUCK_PENDING, pg.orderId, ours, pg)
+            ours.isSuccess ->
+                if (!ours.hasSameAmount(pg.amount)) record(DiscrepancyType.AMOUNT_MISMATCH, pg.orderId, ours, pg)
+            // 정합 — 성공이었지만 취소되었다. 취소가 실제 끝났는지는 취소 축이 본다.
+            ours.isCanceled && ours.approvedAt != null -> Unit
+            ours.isFailed ->
+                record(DiscrepancyType.PAID_BUT_FAILED, pg.orderId, ours, pg)
             else ->
-                record(DiscrepancyType.UNRESOLVED, moid, ours, pg)
+                record(DiscrepancyType.UNRESOLVED, pg.orderId, ours, pg)
         }
     }
 
-    // 우리 쪽 목록을 훑는다. PG에 없는 성공은 개별 조회로 재확인하지 않는다 — 우리 approved_at도
-    // PG가 준 값이라 두 목록의 축이 같고, 어긋난다면 그게 곧 사람이 봐야 할 불일치다.
-    // 미결은 승인 시각이 없어 생성 시각으로 자른다. PG 목록에 있는 미결은 reconcile()이 pg와
-    // 함께 적재하므로 여기서는 목록에 없는 것만 본다 — 빈 pg_status가 곧 "승인 미도달"이다.
-    private fun recordFromOurSide(windowStart: Instant, windowEnd: Instant, tossMoids: Set<String>) {
+    private fun reconcileCancel(pg: PgTransaction) {
+        if (paymentCancelService.findByTransactionKey(pg.transactionKey) != null) return
+
+        val ours = paymentTransactionService.findByMoid(pg.orderId)
+        // 키를 아직 못 받은 우리 취소다(응답 유실). 아래 recordFromOurSide가 STUCK_CANCEL로 적재한다.
+        if (ours != null && paymentCancelService.findRequestedByTransactionSeq(ours.id!!) != null) return
+
+        record(DiscrepancyType.UNKNOWN_CANCEL, pg.orderId, ours, pg)
+    }
+
+    private fun reconcileNotCompleted(pg: PgTransaction) {
+        val ours = paymentTransactionService.findByMoid(pg.orderId)
+        when {
+            ours == null ->
+                record(DiscrepancyType.ORPHAN, pg.orderId, null, pg)
+            ours.isPending ->
+                record(DiscrepancyType.STUCK_PENDING, pg.orderId, ours, pg)
+            ours.isSuccess ->
+                record(DiscrepancyType.NOT_COMPLETED_BUT_SUCCESS, pg.orderId, ours, pg)
+            ours.isFailed -> Unit
+            else ->
+                record(DiscrepancyType.UNRESOLVED, pg.orderId, ours, pg)
+        }
+    }
+
+    private fun recordFromOurSide(windowStart: Instant, windowEnd: Instant, pgRows: List<PgTransaction>) {
+        val pgMoids = pgRows.mapTo(mutableSetOf()) { it.orderId }
+        val pgPaidMoids = pgRows.filter { it.isPaid }.mapTo(mutableSetOf()) { it.orderId }
+        val pgCancelKeys = pgRows.filter { it.isCanceled }.mapTo(mutableSetOf()) { it.transactionKey }
+
         for (transaction in paymentTransactionService.findPendingsCreatedBetween(windowStart, windowEnd)) {
-            if (transaction.moid !in tossMoids) record(DiscrepancyType.STUCK_PENDING, transaction.moid, transaction, null)
+            if (transaction.moid !in pgMoids) record(DiscrepancyType.STUCK_PENDING, transaction.moid, transaction, null)
         }
         for (transaction in paymentTransactionService.findSuccessesApprovedBetween(windowStart, windowEnd)) {
-            if (transaction.moid !in tossMoids) record(DiscrepancyType.MISSING_AT_PG, transaction.moid, transaction, null)
+            if (transaction.moid !in pgPaidMoids) record(DiscrepancyType.MISSING_AT_PG, transaction.moid, transaction, null)
         }
+        for (cancel in paymentCancelService.findRequestedCreatedBetween(windowStart, windowEnd)) {
+            recordCancel(DiscrepancyType.STUCK_CANCEL, cancel, cancel.lastError)
+        }
+        for (cancel in paymentCancelService.findDoneCanceledBetween(windowStart, windowEnd)) {
+            if (cancel.transactionKey !in pgCancelKeys) {
+                recordCancel(DiscrepancyType.CANCEL_MISSING_AT_PG, cancel, cancel.transactionKey)
+            }
+        }
+    }
+
+    private fun recordCancel(type: DiscrepancyType, cancel: PaymentCancel, detail: String?) {
+        val transaction = paymentTransactionService.findById(cancel.paymentTransactionSeq)
+        record(type, transaction?.moid ?: "payment-cancel-${cancel.id}", transaction, null, detail)
     }
 
     // 감지 시점의 양쪽 상태·금액을 얼려서 OPEN으로 넣는다. 중복 검사는 없다 — 정리는 관리자 몫.
-    private fun record(type: DiscrepancyType, moid: String, ours: PaymentTransaction?, pg: PgTransaction?) {
+    private fun record(type: DiscrepancyType, moid: String, ours: PaymentTransaction?, pg: PgTransaction?, detail: String? = null) {
+        val pgDetail = if (pg != null) "PG 상태: ${pg.rawStatus}" else null
         reconciliationDiscrepancyService.create(
             PaymentSystem.TOSS, type, moid,
-            ours?.status, pg?.status, ours?.amount, pg?.amount, if (pg != null) "PG 상태: ${pg.rawStatus}" else null,
+            ours?.status, pg?.status, ours?.amount, pg?.amount, detail ?: pgDetail,
         )
     }
 
